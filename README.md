@@ -41,6 +41,8 @@ hermes plugins enable orcaslicer
 
 This is a **repository installation**, not an official catalog entry. Follow Hermes' plugin installation review. Restart your Hermes session after enabling it.
 
+Hermes may report caution findings because the plugin invokes the local slicer and its test suite exercises rejection of invalid paths. Review the files it identifies and keep the scanner enabled.
+
 Ask Hermes:
 
 > Check OrcaSlicer, inspect my bracket.3mf, and prepare a 0.20 mm, three-wall version. Slice it and show me its first layer and time estimate. Export the sliced project without starting my printer.

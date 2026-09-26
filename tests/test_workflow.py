@@ -263,7 +263,7 @@ class PrinterTests(Base):
         self.assertEqual(FakeHTTP.calls[-1], ("POST", "/api/job", {"command": "pause", "action": "pause"}))
 
     def test_bad_urls_and_secrets_not_in_config(self):
-        for url in ("file:///etc/passwd", "https://user:password@localhost", "http://localhost/?key=secret"):
+        for url in ("file:///unsupported-printer", "https://user:password@localhost", "http://localhost/?key=secret"):
             with self.subTest(url=url), self.assertRaises(OrcaError):
                 self.p.configure("invalid", "moonraker", "Example", url)
         self.p.configure("authenticated", "octoprint", "Example", "https://localhost", "OCTO_API_KEY")
