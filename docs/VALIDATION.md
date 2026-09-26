@@ -2,7 +2,7 @@
 
 Date: 2026-09-26. Preview release; no physical print was started as part of development.
 
-The 24-test suite passed locally and in all six CI combinations: Linux, macOS and Windows, each with Python 3.11 and 3.13. Wheel installation and its Hermes entry point/bundled skill were verified in an isolated Python environment. Installation from the public GitHub repository, with Hermes security scanning enabled, and Plugin Doctor against that installed copy both passed in a disposable Hermes home. The user's active Hermes installation was not changed.
+The original 24-test suite passed locally and in all six CI combinations: Linux, macOS and Windows, each with Python 3.11 and 3.13. Wheel installation and its Hermes entry point/bundled skill were verified in an isolated Python environment. Installation from the public GitHub repository, with Hermes security scanning enabled, and Plugin Doctor against that installed copy both passed in a disposable Hermes home. The user's active Hermes installation was not changed.
 
 ## Executed locally
 
@@ -12,7 +12,8 @@ The 24-test suite passed locally and in all six CI combinations: Linux, macOS an
 - Prusa MK4 0.4 nozzle: a generated 5 mm cube was sliced from raw STL using resolved stock machine, process and PLA profiles. G-code and sliced 3MF produced; first-layer SVG and verified export exercised.
 - Creality Ender-3 V3 0.4 nozzle: same raw-model workflow with Creality's own profiles. G-code and sliced 3MF produced; first-layer SVG and verified export exercised.
 - Profile-library audit: 1,001 machine, 2,882 process and 5,913 filament preset inheritance chains resolved from the installed library. These are counts of presets, not distinct printer models. 39 additional instantiated presets had missing or ambiguous parents in that library; the plugin refuses to guess. Use an Orca-exported project with resolved settings for such cases.
-- Unit/protocol suite covers vendor isolation, inheritance failures, source preservation, edit validation, nozzle bounds, concrete preset identity, failed slicing, archive path isolation, hashes, export collisions, SVG semantics, profile mismatch, printer busy state, upload without start, expired receipts, no start retry, HTTP request formatting, redirect refusal, secret-safe errors and plugin registration.
+- The lean acceptance suite now has 13 tests: three tool-to-HTTP workflows plus 10 focused profile/artifact regressions. It passed locally. The workflows use registered Hermes handlers and a loopback printer simulator for both OctoPrint and Moonraker, exercising actual HTTP authentication, multipart upload, start/control, observed status, lost replies across agent restart, redirects, busy/mismatched destinations, expired receipts and changed artifacts. These are protocol simulations, not hardware tests.
+- The opt-in real Orca workflow now asserts prepare → slice → preview → byte-identical export through registered Hermes handlers for both Prusa and Creality; both passed locally.
 
 ## Important observations
 

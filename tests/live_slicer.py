@@ -7,7 +7,7 @@ import json
 import time
 from pathlib import Path
 
-from orca_plugin import Service
+from tests.tools_harness import Tools
 from orca_plugin.profiles import Catalog, roots
 from orca_plugin.slicer import discover
 
@@ -29,7 +29,7 @@ def run():
     base.mkdir(parents=True, exist_ok=True)
     model = base / "cube.stl"
     cube(model)
-    service = Service(base)
+    tools = Tools(base)
     catalog = Catalog(roots(discover()))
     cases = [
         ("Prusa", "Prusa MK4 0.4 nozzle", "0.20mm Standard @MK4", "Prusa Generic PLA @MK4"),
@@ -39,14 +39,23 @@ def run():
     for vendor, machine, process, filament in cases:
         def preset(kind, name):
             return str(catalog.items[vendor, kind, name][0])
-        job = service.invoke("orca_prepare", {"source": str(model), "machine": preset("machine", machine),
-                              "process": preset("process", process), "filaments": [preset("filament", filament)]})
-        service.invoke("orca_slice", {"job_id": job["id"]})
+        job = tools.call("orca_prepare", source=str(model), machine=preset("machine", machine),
+                         process=preset("process", process), filaments=[preset("filament", filament)])
+        tools.call("orca_slice", job_id=job["id"])
         while True:
-            result = service.slicer.job(job["id"])
+            result = tools.call("orca_job", job_id=job["id"])
             if result["state"] != "slicing":
                 break
             time.sleep(0.2)
+        if result["state"] == "sliced":
+            assert result["printer_profile"] == machine
+            artifact = next(a for a in result["artifacts"] if a["name"].endswith(".gcode"))
+            preview = tools.call("orca_preview", job_id=job["id"], artifact=artifact["name"])
+            assert preview["segments"] > 0, preview
+            destination = base / (job["id"] + ".gcode")
+            exported = tools.call("orca_export", job_id=job["id"], artifact=artifact["name"], destination=str(destination))
+            assert exported["print_started"] is False
+            assert destination.read_bytes() == Path(artifact["path"]).read_bytes()
         print(json.dumps({"printer": machine, "job": job["id"], "state": result["state"],
                           "error": result.get("error"), "reports": result.get("reports")}), flush=True)
         results.append(result)
