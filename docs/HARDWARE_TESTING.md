@@ -25,6 +25,8 @@ Omit `--camera` if no supported camera is configured. The runner records whether
 
 The automated suite covers five HTTP adapters and Bambu MQTT/FTPS plus TLS JPEG framing. Generic HTTP snapshot validation includes separate credentials, redirect rejection and invalid image rejection. It remains a lean set of end-to-end workflows.
 
+Monitoring preserves raw firmware states alongside normalized phases. Bambu `FAILED` with cancellation code `0x0300400C` is reported as `cancelled`, consistent with Orca's shipped HMS catalog; unrelated HMS entries remain visible and require attention. A Bambu running state at layer zero is reported as `preparing`. Neither distinction changes the command retry or physical-readiness rules.
+
 P1/A1-style TLS JPEG is implemented; other Bambu models may require unsupported RTSPS. Generic snapshots require an explicitly supplied HTTP(S) endpoint. Duet and Flashforge status fields remain more limited than Bambu, Moonraker and OctoPrint. A status read with missing fields is not proof those sensors or capabilities exist. Real Orca execution on Windows/Linux and physical testing across the other printer protocols still require suitable hosts/hardware.
 
 References: [Bambu camera protocol research](https://github.com/Doridian/OpenBambuAPI/blob/main/video.md), [Moonraker printer API](https://moonraker.readthedocs.io/en/latest/external_api/printer/), [OctoPrint printer API](https://docs.octoprint.org/en/main/api/printer.html).

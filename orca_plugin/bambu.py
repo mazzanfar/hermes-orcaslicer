@@ -182,6 +182,9 @@ class BambuLAN:
                 "temperatures": {"nozzle": {"actual": number(data.get("nozzle_temper")), "target": number(data.get("nozzle_target_temper"))},
                                  "bed": {"actual": number(data.get("bed_temper")), "target": number(data.get("bed_target_temper"))}},
                 "error_code": data.get("print_error"), "hms": data.get("hms", []),
+                # Orca's shipped HMS catalog labels 0300400C as cancellation.
+                # Preserve the raw FAILED state/code for troubleshooting.
+                "cancelled": fresh and state == "FAILED" and number(data.get("print_error")) == 0x0300400C,
                 "stage_code": data.get("stg_cur"), "ams_trays": trays,
                 "note": "Temperatures and material entries are last-reported telemetry; freshness does not certify physical readiness."}
 

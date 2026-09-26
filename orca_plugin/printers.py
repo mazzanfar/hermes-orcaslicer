@@ -213,9 +213,13 @@ class Printers:
         result = self.adapter(config).status()
         result["observed_at"] = time.time()
         result["phase"] = phase(result.get("state"))
+        if result.get("cancelled"):
+            result["phase"] = "cancelled"
+        elif config["kind"] == "bambu_lan" and result.get("state") == "RUNNING" and result.get("layer") == 0:
+            result["phase"] = "preparing"
         if result.get("error") or result.get("error_code") not in (None, 0, "0"):
             result["ready_to_start"] = False
-        result["requires_attention"] = result["phase"] in {"error", "paused"} or bool(result.get("error")) or result.get("error_code") not in (None, 0, "0")
+        result["requires_attention"] = result["phase"] in {"error", "paused"} or bool(result.get("error")) or bool(result.get("hms")) or (result.get("error_code") not in (None, 0, "0") and not result.get("cancelled"))
         return result
 
     def snapshot(self, name):
