@@ -1,3 +1,15 @@
+# 0.2.0 preview
+
+Adds 20-tool workflows for object editing, reusable native review copies, explicit build-plate selection and offline preflight. Direct protocols now include Bambu LAN MQTT/FTPS, PrusaLink v1, Duet RepRapFirmware HTTP and modern single-tool Flashforge HTTP alongside OctoPrint and Moonraker.
+
+Camera snapshots support explicit HTTP(S) JPEG/PNG endpoints and Bambu P1/A1 TLS JPEG. Monitoring reports available temperatures, progress, layers, errors and changes, with optional receipt-to-filename matching. Missing or different job identity remains unknown. Monitoring is one observation, not a background notification service.
+
+The base installation now includes the bounded MQTT dependency so a normal Hermes install can use Bambu LAN without a separate manual package install. The `[bambu]` extra remains compatible. The diagnosis tool points agents to the bundled `orcaslicer:workflow` skill.
+
+Validation includes a lean 14-test acceptance suite, actual Hermes runtime/catalog checks and stock OrcaSlicer 2.4.2 offline workflows on macOS and Linux. Windows has Python/protocol CI coverage; real Windows slicing remains unverified. See [validation](VALIDATION.md) for precise evidence and limits.
+
+Direct connection support depends on the protocol, model and firmware; an Orca profile does not establish network compatibility. Cloud services, RTSP/RTSPS camera streams, continuous video, Flashforge material stations and autonomous printing remain outside this preview. Private camera and hardware-session records are not distributed.
+
 # 0.1.0 preview
 
 First public native Hermes plugin for stock OrcaSlicer, with 14 tools covering preset discovery, isolated job preparation, local slicing, warnings/estimates, linear layer preview, verified export and optional network printer operations.

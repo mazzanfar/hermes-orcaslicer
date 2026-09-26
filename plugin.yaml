@@ -1,6 +1,6 @@
 name: orcaslicer
-version: "0.1.0"
-description: "Inspect, slice, preview and export with every OrcaSlicer printer profile; connect OctoPrint and Moonraker printers."
+version: "0.2.0"
+description: "Prepare, slice, preflight and export with OrcaSlicer profiles; upload and control printers through supported network protocols."
 manifest_version: 2
 api_version: 1
 license: MIT
@@ -8,6 +8,9 @@ author: mazzanfar
 homepage: https://github.com/mazzanfar/hermes-orcaslicer
 tags: [3d-printing, orcaslicer, slicing, printers]
 provides_tools:
+  - orca_capabilities
+  - orca_edit_project
+  - orca_open_native
   - orca_diagnose
   - orca_presets
   - orca_inspect
@@ -19,6 +22,9 @@ provides_tools:
   - orca_printer_configure
   - orca_printers
   - orca_printer_status
+  - orca_camera_snapshot
+  - orca_monitor
+  - orca_preflight
   - orca_upload
   - orca_start
   - orca_printer_control

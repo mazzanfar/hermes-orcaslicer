@@ -14,7 +14,7 @@ import zipfile
 from pathlib import Path
 
 from .common import OrcaError, existing_file, identifier, read_json, sha256, write_json
-from .profiles import Catalog, inspect_project, project_settings, roots, validate_changes
+from .profiles import BED_TYPES, Catalog, inspect_project, project_settings, roots, validate_changes
 
 REQUIRED_FLAGS = ("--slice", "--outputdir", "--export-3mf", "--datadir")
 
@@ -61,11 +61,17 @@ class Slicer:
             raise OrcaError("Unknown job id.")
         return path
 
-    def prepare(self, source, changes=None, machine=None, process=None, filaments=None, plate=1):
+    def prepare(self, source, changes=None, machine=None, process=None, filaments=None, plate=1, arrange=False, orient=False, bed_type=None):
         src = existing_file(source, {".3mf", ".stl", ".obj", ".step", ".stp"})
         if type(plate) is not int or plate < 1:
             raise OrcaError("Choose a single plate number starting at 1. Slice each plate as a separate job.")
+        if type(arrange) is not bool or type(orient) is not bool:
+            raise OrcaError("arrange and orient must be booleans.")
         changes = validate_changes(changes or {})
+        if bed_type is not None:
+            if not isinstance(bed_type, str) or bed_type not in BED_TYPES:
+                raise OrcaError("Choose a supported Orca bed_type; inspect the physical plate first.")
+            changes["curr_bed_type"] = bed_type
         exe = discover()
         catalog = Catalog(roots(exe))
         resolved = {}
@@ -145,7 +151,8 @@ class Slicer:
         job = {"id": job_id, "state": "prepared", "created_at": time.time(),
                "input": str(copy), "source_name": src.name, "source_sha256": sha256(src),
                "input_sha256": sha256(copy), "printer_profile": machine_name,
-               "plate": plate, "changes": changes, "executable": str(exe),
+               "plate": plate, "bed_type": settings.get("curr_bed_type"),
+               "arrange": arrange, "orient": orient, "changes": changes, "executable": str(exe),
                "settings_files": settings_files, "filament_files": fila_files,
                "note": "Inspect object overrides and previews before printing. No printer contacted."}
         write_json(directory / "job.json", job)
@@ -175,6 +182,10 @@ class Slicer:
                 args += ["--load-settings", ";".join(job["settings_files"])]
             if job["filament_files"]:
                 args += ["--load-filaments", ";".join(job["filament_files"])]
+            if job.get("arrange"):
+                args += ["--arrange", "1"]
+            if job.get("orient"):
+                args += ["--orient", "1", "--ensure-on-bed"]
             args += [job["input"]]
             self._update(directory, state="slicing", started_at=time.time(), command=args)
             thread = threading.Thread(target=self._run, args=(directory, args), daemon=True)
@@ -250,6 +261,48 @@ class Slicer:
             raise OrcaError("Artifact is missing or changed. Re-slice before exporting or printing.")
         return Path(item["path"]), job
 
+    def open_native(self, job_id, artifact, launch=False):
+        source, job = self.artifact(job_id, artifact)
+        if source.suffix.lower() != ".3mf":
+            raise OrcaError("Select the sliced .3mf artifact for full native preview and editing.")
+        if type(launch) is not bool:
+            raise OrcaError("launch must be a boolean.")
+        directory = self.directory(job_id) / "review"
+        directory.mkdir(exist_ok=True)
+        copy = directory / "review.3mf"
+        if not copy.exists():
+            with copy.open("xb") as out, source.open("rb") as inp:
+                shutil.copyfileobj(inp, out)
+        marker = directory / "launch-requested"
+        launched = marker.exists()
+        if launch and not launched:
+            exe = discover()
+            args = [str(exe), str(copy)]
+            if sys.platform == "darwin":
+                args = ["open", "-a", str(exe.parent.parent.parent), str(copy)]
+            try:
+                with marker.open("x"):
+                    pass
+            except FileExistsError:
+                launched = True
+            else:
+                try:
+                    with (directory / "native.log").open("wb") as log:
+                        process = subprocess.Popen(args, stdin=subprocess.DEVNULL, stdout=log,
+                                                   stderr=subprocess.STDOUT, start_new_session=os.name != "nt")
+                    try:
+                        code = process.wait(timeout=1)
+                        if code != 0:
+                            raise OrcaError(f"Orca GUI exited with code {code}; inspect native.log in the review directory.")
+                    except subprocess.TimeoutExpired:
+                        pass
+                    launched = True
+                except Exception:
+                    marker.unlink(missing_ok=True)
+                    raise
+        return {"project": str(copy), "launch_requested": launched, "print_started": False,
+                "next": "Open this editable copy in Orca's existing window. Prepare provides full object/plate editing; Preview provides full toolpaths. Save edits here, then prepare and re-slice. Repeated calls reuse this copy and never launch another window. Launch is not proof of visual review."}
+
     def export(self, job_id, name, destination):
         source, job = self.artifact(job_id, name)
         dest = Path(destination).expanduser().resolve()
@@ -264,11 +317,12 @@ class Slicer:
         return {"exported": str(dest), "sha256": sha256(dest), "printer_profile": job["printer_profile"], "print_started": False}
 
 
-def analyze_gcode(path: Path):
+def analyze_gcode(path: Path, stream=None):
     """Read slicer comments, not arbitrary command effects; expose uncertainty."""
     summary = {}
     layers = 0
-    with path.open(errors="replace") as f:
+    from contextlib import nullcontext
+    with (nullcontext(stream) if stream is not None else path.open(errors="replace")) as f:
         for line in f:
             if line.startswith("; model printing time:"):
                 for part in line.lstrip("; ").split(";"):
@@ -280,7 +334,12 @@ def analyze_gcode(path: Path):
             if line.startswith(";") and "=" in line:
                 key, value = line[1:].split("=", 1)
                 key = key.strip()
-                if any(k in key for k in ("estimated printing time", "estimated first layer", "total estimated time", "filament used", "total filament", "total layer number", "printer_settings_id", "nozzle_diameter", "gcode_flavor")):
+                if key in {"curr_bed_type", "filament_type", "filament_settings_id", "nozzle_temperature",
+                           "nozzle_temperature_initial_layer", "first_layer_bed_temperature", "bed_temperature",
+                           "textured_plate_temp", "textured_plate_temp_initial_layer", "cool_plate_temp",
+                           "cool_plate_temp_initial_layer", "hot_plate_temp", "hot_plate_temp_initial_layer",
+                           "eng_plate_temp", "eng_plate_temp_initial_layer", "textured_cool_plate_temp",
+                           "textured_cool_plate_temp_initial_layer", "supertack_plate_temp", "supertack_plate_temp_initial_layer"} or any(k in key for k in ("estimated printing time", "estimated first layer", "total estimated time", "filament used", "total filament", "total layer number", "printer_settings_id", "nozzle_diameter", "gcode_flavor")):
                     summary[key] = value.strip()[:300]
     return {"file": path.name, "metadata": summary, "layer_markers": layers,
             "limitations": "Metadata only; no claim that arbitrary G-code is safe or geometrically valid."}
