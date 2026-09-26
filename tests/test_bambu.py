@@ -123,7 +123,8 @@ class FTPS(TLSHandler):
                         content = b""
                         while chunk := data.recv(65536):
                             content += chunk
-                        data.unwrap().close()
+                        # Match P1S: wait for data-socket EOF, without a
+                        # reciprocal TLS close_notify shutdown exchange.
                     s.uploaded[value] = content
                     reply("226 Stored")
                 elif command == "SIZE":

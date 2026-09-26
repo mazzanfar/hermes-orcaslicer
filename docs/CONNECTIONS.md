@@ -8,6 +8,8 @@ All connections bind to an exact `printer_profile`. `orca_upload` returns a rece
 
 Requires firmware that allows local MQTT/FTPS, usually LAN-only mode and, on authorization-controlled firmware, Developer Mode. Cloud submission is not implemented. Enabling these modes is a user decision; the plugin never changes printer security settings.
 
+On macOS, allow Local Network access for the application running the agent. A denied permission can surface as `EHOSTUNREACH` even when the printer responds to ping. P1S hardware checks have verified secure status and upload; physical printing remains pending (see [validation record](HARDWARE_VALIDATION.md)).
+
 Install the optional dependency in the Python environment that runs Hermes: `pip install 'hermes-orcaslicer[bambu] @ git+https://github.com/mazzanfar/hermes-orcaslicer.git'`. A repository-only Hermes installation does not install this optional dependency automatically. Python 3.11+ and paho-mqtt 2.x are supported. Other adapters need no third-party runtime packages.
 
 Configure `kind=bambu_lan`, `url=https://PRINTER_IP`, and these `options`:

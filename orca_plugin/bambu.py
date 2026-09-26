@@ -33,6 +33,16 @@ class PrinterTLS(ssl.SSLContext):
 
 
 class ImplicitFTPS(ftplib.FTP_TLS):
+    def store_file(self, filename, source):
+        self.voidcmd("TYPE I")
+        with self.transfercmd("STOR " + filename) as data:
+            while block := source.read(65536):
+                data.sendall(block)
+        # P1S does not answer the TLS close_notify exchange used by ftplib's
+        # storbinary. Close the data socket, then require the FTP completion
+        # response; the caller also verifies the remote size before a receipt.
+        return self.voidresp()
+
     def connect(self, host, port=990, timeout=30, source_address=None):
         self.host, self.port, self.timeout = host, port, timeout
         raw = socket.create_connection((host, port), timeout, source_address)
@@ -185,7 +195,7 @@ class BambuLAN:
                 ftp.login("bblp", secret(self.options, "access_code_env"))
                 ftp.prot_p()
                 with path.open("rb") as source:
-                    ftp.storbinary("STOR " + filename, source, blocksize=65536)
+                    ftp.store_file(filename, source)
                 ftp.voidcmd("TYPE I")
                 if ftp.size(filename) != path.stat().st_size:
                     raise OrcaError("Bambu upload size could not be verified. No start receipt created.")
