@@ -6,6 +6,7 @@ attempts are durable and never retried automatically after an uncertain reply.
 from __future__ import annotations
 
 import json
+import http.client
 import os
 import re
 import ssl
@@ -33,8 +34,8 @@ class HTTP:
         self.base = config["url"].rstrip("/")
         self.opener = urllib.request.build_opener(NoRedirect(), urllib.request.HTTPSHandler(context=ssl.create_default_context()))
 
-    def request(self, method, path, data=None, content_type=None):
-        headers = {"Accept": "application/json"}
+    def request(self, method, path, data=None, content_type=None, headers=None):
+        headers = {"Accept": "application/json", **(headers or {})}
         env = self.config.get("api_key_env")
         if env:
             secret = os.environ.get(env)
@@ -44,6 +45,14 @@ class HTTP:
         if isinstance(data, dict):
             data = json.dumps(data).encode()
             content_type = "application/json"
+        options = self.config.get("options", {})
+        if options.get("username") and options.get("password_env"):
+            password = os.environ.get(options["password_env"])
+            if not password:
+                raise OrcaError("Set the configured password environment variable.")
+            manager = urllib.request.HTTPPasswordMgrWithDefaultRealm()
+            manager.add_password(None, self.base, options["username"], password)
+            self.opener.add_handler(urllib.request.HTTPDigestAuthHandler(manager))
         if content_type:
             headers["Content-Type"] = content_type
         request = urllib.request.Request(self.base + path, data=data, headers=headers, method=method)
@@ -57,21 +66,21 @@ class HTTP:
             code = exc.code
             exc.close()
             raise OrcaError(f"Printer returned HTTP {code}. Check connection, permissions and printer state.") from None
-        except (urllib.error.URLError, TimeoutError, OSError) as exc:
+        except (urllib.error.URLError, TimeoutError, OSError, http.client.HTTPException) as exc:
             raise OrcaError("Printer request failed or timed out. Its outcome may be unknown; check status before any further action.") from exc
         except ValueError as exc:
             raise OrcaError("Printer returned invalid JSON.") from exc
 
-    def upload(self, endpoint, path, filename, fields):
+    def upload(self, endpoint, path, filename, fields, headers=None, field_name="file"):
         if path.stat().st_size > 256 * 1024 * 1024:
             raise OrcaError("Remote uploads are limited to 256 MB; use file export for larger jobs.")
         boundary = "hermesorca" + uuid.uuid4().hex
         chunks = []
         for key, value in fields.items():
             chunks.append(f'--{boundary}\r\nContent-Disposition: form-data; name="{key}"\r\n\r\n{value}\r\n'.encode())
-        chunks += [f'--{boundary}\r\nContent-Disposition: form-data; name="file"; filename="{filename}"\r\nContent-Type: application/octet-stream\r\n\r\n'.encode(),
+        chunks += [f'--{boundary}\r\nContent-Disposition: form-data; name="{field_name}"; filename="{filename}"\r\nContent-Type: application/octet-stream\r\n\r\n'.encode(),
                    path.read_bytes(), f"\r\n--{boundary}--\r\n".encode()]
-        return self.request("POST", endpoint, b"".join(chunks), f"multipart/form-data; boundary={boundary}")
+        return self.request("POST", endpoint, b"".join(chunks), f"multipart/form-data; boundary={boundary}", headers=headers)
 
 
 class Moonraker:
@@ -123,7 +132,10 @@ class OctoPrint:
         return self.http.request("POST", "/api/job", body)
 
 
-ADAPTERS = {"moonraker": Moonraker, "octoprint": OctoPrint}
+from .http_printers import PrusaLink, Duet, Flashforge
+from .bambu import BambuLAN
+
+ADAPTERS = {"moonraker": Moonraker, "octoprint": OctoPrint, "prusalink": PrusaLink, "duet": Duet, "bambu_lan": BambuLAN, "flashforge_http": Flashforge}
 
 
 class Printers:
@@ -131,11 +143,12 @@ class Printers:
         self.base = base
         self.slicer = slicer
         self.http_factory = http_factory
+        self._bambu = {}
 
-    def configure(self, name, kind, printer_profile, url=None, api_key_env=None):
+    def configure(self, name, kind, printer_profile, url=None, api_key_env=None, options=None):
         identifier(name)
         if kind not in {*ADAPTERS, "file"}:
-            raise OrcaError("Connection must be file, moonraker, or octoprint. File export works with any Orca-supported printer.")
+            raise OrcaError("Unknown connection protocol. Use orca_capabilities for supported protocols.")
         if not isinstance(printer_profile, str) or not printer_profile.strip():
             raise OrcaError("Supply the exact Orca printer preset name, including nozzle size.")
         config = {"name": name, "kind": kind, "printer_profile": printer_profile}
@@ -148,6 +161,12 @@ class Printers:
                 if not re.fullmatch(r"[A-Z_][A-Z0-9_]*", api_key_env):
                     raise OrcaError("Supply the environment variable NAME, not an API key.")
                 config["api_key_env"] = api_key_env
+        from .connections import validate_options
+        config["options"] = validate_options(kind, options or {})
+        if kind == "bambu_lan":
+            endpoint = urllib.parse.urlsplit(url)
+            if endpoint.scheme != "https" or endpoint.path not in ("", "/") or endpoint.port:
+                raise OrcaError("Use https://PRINTER_HOST for Bambu LAN; set optional mqtt_port/ftps_port in options.")
         path = self.base / "printers" / f"{name}.json"
         if path.exists():
             raise OrcaError("Printer name already exists. Use a new name to keep existing job receipts valid.")
@@ -165,6 +184,11 @@ class Printers:
     def adapter(self, config):
         if config["kind"] == "file":
             raise OrcaError("This printer uses file handoff. Export the artifact and use its SD/USB/native upload workflow.")
+        if config["kind"] == "bambu_lan":
+            key = json.dumps(config, sort_keys=True)
+            if key not in self._bambu:
+                self._bambu[key] = BambuLAN(self.http_factory(config))
+            return self._bambu[key]
         return ADAPTERS[config["kind"]](self.http_factory(config))
 
     def status(self, name):
@@ -176,21 +200,23 @@ class Printers:
     def upload(self, name, job_id, artifact):
         config = self.config(name)
         path, job = self.slicer.artifact(job_id, artifact)
-        if path.suffix.lower() != ".gcode":
-            raise OrcaError("This connection accepts plain G-code only. Do not send Bambu/other 3MF containers through it.")
+        extension = ".3mf" if config["kind"] == "bambu_lan" else ".gcode"
+        if path.suffix.lower() != extension:
+            raise OrcaError(f"This connection requires a verified {extension} artifact.")
         if job["printer_profile"] != config["printer_profile"]:
             raise OrcaError("Job printer/nozzle preset does not match the configured destination.")
         adapter = self.adapter(config)
         if not adapter.status()["ready_to_start"]:
             raise OrcaError("Printer is busy, disconnected or not ready; upload was not attempted.")
-        remote_name = f"hermes-{job_id}-{uuid.uuid4().hex[:8]}.gcode"
+        remote_name = f"hermes-{job_id}-{uuid.uuid4().hex[:8]}{extension}"
+        details = adapter.validate_job(path, job) if hasattr(adapter, "validate_job") else {}
         remote = adapter.upload(path, remote_name)
         if not isinstance(remote, str) or not remote or any(c in remote for c in ("\r", "\n")) or ".." in remote.split("/"):
             raise OrcaError("Printer returned an invalid remote filename.")
         receipt_id = uuid.uuid4().hex
         receipt = {"id": receipt_id, "printer": name, "config": config, "job_id": job_id,
                    "artifact": artifact, "sha256": sha256(path), "remote": remote,
-                   "uploaded_at": time.time(), "state": "uploaded"}
+                   "uploaded_at": time.time(), "state": "uploaded", "details": details}
         write_json(self.base / "receipts" / f"{receipt_id}.json", receipt)
         return {"receipt_id": receipt_id, "remote": remote, "print_started": False,
                 "next": "Review job and destination, confirm clear bed/material, then explicitly request start."}
@@ -219,7 +245,10 @@ class Printers:
             raise OrcaError("Start was already attempted. Check printer status; this operation will not retry.") from exc
         receipt["state"] = "start_outcome_unknown"
         write_json(receipt_path, receipt)
-        adapter.start(receipt["remote"])
+        if config["kind"] == "bambu_lan":
+            adapter.start(receipt["remote"], receipt["details"])
+        else:
+            adapter.start(receipt["remote"])
         receipt["state"] = "start_accepted"
         write_json(receipt_path, receipt)
         return {"receipt_id": receipt_id, "state": "start_accepted", "note": "Command accepted; poll printer status to verify actual printing."}

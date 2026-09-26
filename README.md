@@ -2,20 +2,22 @@
 
 A native Hermes plugin for preparing, slicing, reviewing and exporting 3D prints with **stock OrcaSlicer**. It uses OrcaSlicer's own installed printer, process and filament profiles—including custom presets—instead of maintaining a separate list of printer models.
 
-**Status: 0.1.0 preview.** Real slicing has been exercised on macOS with OrcaSlicer 2.4.2 and Bambu P1S, Prusa MK4 and Creality Ender-3 V3 profiles. These are slicing tests, not physical print certifications. Network adapters have protocol simulation tests; physical printer validation is still needed. See [validation](docs/VALIDATION.md).
+**Status: development preview (after 0.1.0).** Real slicing has been exercised on macOS with OrcaSlicer 2.4.2 and Bambu P1S, Prusa MK4 and Creality Ender-3 V3 profiles. These are slicing tests, not physical print certifications. Bambu LAN, PrusaLink, Duet and modern Flashforge HTTP adapters now join OctoPrint and Moonraker. Network adapters have protocol simulation tests; physical printer validation is still needed. See [validation](docs/VALIDATION.md).
 
 ## What works
 
 - Discover the installed slicer and its profile libraries.
 - Inspect existing Orca-compatible 3MF projects, including per-object metadata.
 - Prepare STL, OBJ, STEP or 3MF jobs with exact printer/nozzle/material presets.
-- Make bounded global process edits in an isolated copy, preserving the source.
+- Make bounded global and per-object process edits in an isolated copy, preserving the source.
+- Move, rotate and scale project instances; request Orca automatic arrangement/orientation.
+- Reuse one editable review copy for full interactive editing and toolpath review in native Orca. GUI launch is optional and requested at most once per job.
 - Slice in the background, report failures and warnings, and read time/material estimates.
 - Produce a per-layer SVG of linear extrusion moves and export the full sliced 3MF for Orca's complete preview.
 - Export verified G-code or sliced 3MF for SD/USB/native upload.
-- Upload, explicitly start, monitor, pause/resume/cancel through OctoPrint and Moonraker.
+- Upload, explicitly start, monitor, pause/resume/cancel through the implemented protocols below.
 
-No mouse automation, modified slicer build, bundled firmware, model service, or Python runtime dependencies are required. You install OrcaSlicer separately. This project is independent of Nous Research and the OrcaSlicer project.
+No mouse automation, modified slicer build, bundled firmware, model service, are required. Bambu LAN uses the optional `paho-mqtt` dependency; other workflows use the Python standard library. You install OrcaSlicer separately. This project is independent of Nous Research and the OrcaSlicer project.
 
 ## Printer support: profiles versus connections
 
@@ -26,9 +28,13 @@ No mouse automation, modified slicer build, bundled firmware, model service, or 
 | Any Orca-compatible printer, SD/USB/native handoff | Yes | Through the printer's normal workflow | Through the printer's normal workflow |
 | OctoPrint | Yes | Implemented | Implemented; hardware validation pending |
 | Klipper with Moonraker | Yes | Implemented | Implemented; hardware validation pending |
-| Bambu native LAN/cloud, PrusaLink, Duet, Flashforge, other proprietary protocols | Yes, with an appropriate Orca profile | Native application/manual handoff in this release | Not implemented in this release |
+| Bambu LAN MQTT/FTPS | Yes | Sliced 3MF | Implemented; hardware validation pending |
+| PrusaLink v1 | Yes | Plain G-code | Implemented; hardware validation pending |
+| Duet RepRapFirmware 3 HTTP | Yes | Plain G-code | Implemented; hardware validation pending |
+| Flashforge modern HTTP | Yes | Single-tool external-spool G-code | Implemented; hardware validation pending |
+| Other cloud/vendor protocols and Flashforge material stations/legacy TCP | Yes, with an appropriate Orca profile | Native application/manual handoff | Not implemented |
 
-An Orca printer preset is not a network API. File handoff is intentionally reported as `manual_handoff`, never “printing.” Do not route a proprietary printer through an unrelated adapter. A P1S can use this plugin to slice/export its sliced 3MF; native P1S job submission is not yet implemented.
+An Orca printer preset is not a network API. File handoff is intentionally reported as `manual_handoff`, never “printing.” Do not route a proprietary printer through an unrelated adapter. See [connection setup and protocol limits](docs/CONNECTIONS.md). The P1S LAN implementation needs live validation; [hardware progress](docs/HARDWARE_VALIDATION.md) is tracked separately.
 
 ## Install in Hermes
 
@@ -77,19 +83,22 @@ Jobs live under `~/.hermes-orca/jobs/<id>/`. Each includes an input copy, resolv
 - A saved Orca 3MF is the most reliable way to preserve custom geometry placement, multi-material mapping and start/end G-code.
 - Raw meshes require all three preset types. Inheritance is resolved within the vendor's profile library. Missing/ambiguous parents fail rather than selecting another manufacturer's preset.
 - A profile's explicit compatible-printer list is checked. Conditional compatibility expressions remain Orca's responsibility; inspect the result.
-- Edits change global process settings. Object and plate overrides remain intact and can supersede them. Per-object editing and automatic orientation are not exposed in 0.1.0.
+- `orca_prepare` changes globals and optionally asks Orca to arrange/orient. `orca_edit_project` edits object settings and instance transforms in a new 3MF; stale toolpaths are removed. Inspect IDs first. Rotations are about the instance origin; reassess bed contact and plate assignment. Native Orca covers advanced painting, modifiers and multi-material work. Any saved native edits require a new prepared/sliced job.
 - Printer changes on a configured project are rejected; export its meshes and prepare using the new printer's presets.
 - Slice one plate per job. Multi-plate projects require separate jobs with the appropriate `plate` index. No automatic consecutive printing.
 - For missing/broken vendor preset dependencies, use a project exported by OrcaSlicer containing resolved settings.
 
 ### Preview and estimates
 
-The SVG is a lightweight linear-extrusion review aid. It omits arcs and does not model every firmware command/tool offset; limitations are returned with it. Open the sliced 3MF in OrcaSlicer for full review. No result certifies adhesion, mechanical strength, dimensional fit or arbitrary G-code safety. Times are the slicer's estimates; unknown macro duration can make them inaccurate.
+The SVG is a lightweight linear-extrusion review aid. It omits arcs and does not model every firmware command/tool offset; limitations are returned with it. Use `orca_open_native` to create/reuse a review copy; open it in the existing Orca window for full review. Set `launch=true` only when a launch is wanted; repeated calls do not create new copies or launch additional windows. No result certifies adhesion, mechanical strength, dimensional fit or arbitrary G-code safety. Times are the slicer's estimates; unknown macro duration can make them inaccurate.
 
 ## Tools
 
 | Tool | Purpose |
 |---|---|
+| `orca_capabilities` | Protocol support, setup requirements and limits |
+| `orca_edit_project` | New 3MF with object settings and instance transforms |
+| `orca_open_native` | Reusable native editing/full-preview copy, optional one-time launch |
 | `orca_diagnose` | Installed executable, version and supported flags |
 | `orca_presets` | Find exact machine/process/filament presets |
 | `orca_inspect` | Read project settings and object metadata |
@@ -105,11 +114,12 @@ The SVG is a lightweight linear-extrusion review aid. It omits arcs and does not
 
 ## Develop and test
 
-Python 3.11+; no third-party runtime dependencies.
+Python 3.11+; install `.[bambu]` to include Bambu MQTT. TLS acceptance testing also uses the OpenSSL command-line utility.
 
 ```sh
 git clone https://github.com/mazzanfar/hermes-orcaslicer.git
 cd hermes-orcaslicer
+python -m pip install ".[bambu]"
 python -m unittest discover -s tests -v
 hermes plugins doctor . --ci
 python -m orca_plugin.cli orca_diagnose
@@ -123,6 +133,6 @@ python -m orca_plugin.cli orca_prepare '{"source":"/absolute/path/project.3mf","
 python -m orca_plugin.cli orca_slice '{"job_id":"ID_FROM_PREPARE"}' --wait
 ```
 
-Opt-in real CLI tests: `python -m tests.live_slicer`. They generate a 5 mm cube, slice with installed Prusa and Creality profiles, and never contact a printer. On Linux a display or `xvfb-run` may be needed, depending on the Orca build. macOS app execution under a restrictive sandbox may abort even when `--help` works; run the smoke test in a normal local terminal.
+Opt-in real CLI tests: `python -m tests.live_slicer`. They generate a 5 mm cube, arrange/orient and slice with installed Prusa and Creality profiles, edit/reslice object settings and geometry, preview/export, and verify reusable review copies. They never contact a printer or launch GUI windows. On Linux a display or `xvfb-run` may be needed, depending on the Orca build. macOS app execution under a restrictive sandbox may abort even when `--help` works; run the smoke test in a normal local terminal.
 
 See [architecture](docs/ARCHITECTURE.md), [security and job semantics](SECURITY.md), [contributing](CONTRIBUTING.md), and [release checklist](docs/RELEASING.md).

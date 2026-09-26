@@ -61,10 +61,12 @@ class Slicer:
             raise OrcaError("Unknown job id.")
         return path
 
-    def prepare(self, source, changes=None, machine=None, process=None, filaments=None, plate=1):
+    def prepare(self, source, changes=None, machine=None, process=None, filaments=None, plate=1, arrange=False, orient=False):
         src = existing_file(source, {".3mf", ".stl", ".obj", ".step", ".stp"})
         if type(plate) is not int or plate < 1:
             raise OrcaError("Choose a single plate number starting at 1. Slice each plate as a separate job.")
+        if type(arrange) is not bool or type(orient) is not bool:
+            raise OrcaError("arrange and orient must be booleans.")
         changes = validate_changes(changes or {})
         exe = discover()
         catalog = Catalog(roots(exe))
@@ -145,7 +147,7 @@ class Slicer:
         job = {"id": job_id, "state": "prepared", "created_at": time.time(),
                "input": str(copy), "source_name": src.name, "source_sha256": sha256(src),
                "input_sha256": sha256(copy), "printer_profile": machine_name,
-               "plate": plate, "changes": changes, "executable": str(exe),
+               "plate": plate, "arrange": arrange, "orient": orient, "changes": changes, "executable": str(exe),
                "settings_files": settings_files, "filament_files": fila_files,
                "note": "Inspect object overrides and previews before printing. No printer contacted."}
         write_json(directory / "job.json", job)
@@ -175,6 +177,10 @@ class Slicer:
                 args += ["--load-settings", ";".join(job["settings_files"])]
             if job["filament_files"]:
                 args += ["--load-filaments", ";".join(job["filament_files"])]
+            if job.get("arrange"):
+                args += ["--arrange", "1"]
+            if job.get("orient"):
+                args += ["--orient", "1", "--ensure-on-bed"]
             args += [job["input"]]
             self._update(directory, state="slicing", started_at=time.time(), command=args)
             thread = threading.Thread(target=self._run, args=(directory, args), daemon=True)
@@ -249,6 +255,48 @@ class Slicer:
         if not item or sha256(Path(item["path"])) != item["sha256"]:
             raise OrcaError("Artifact is missing or changed. Re-slice before exporting or printing.")
         return Path(item["path"]), job
+
+    def open_native(self, job_id, artifact, launch=False):
+        source, job = self.artifact(job_id, artifact)
+        if source.suffix.lower() != ".3mf":
+            raise OrcaError("Select the sliced .3mf artifact for full native preview and editing.")
+        if type(launch) is not bool:
+            raise OrcaError("launch must be a boolean.")
+        directory = self.directory(job_id) / "review"
+        directory.mkdir(exist_ok=True)
+        copy = directory / "review.3mf"
+        if not copy.exists():
+            with copy.open("xb") as out, source.open("rb") as inp:
+                shutil.copyfileobj(inp, out)
+        marker = directory / "launch-requested"
+        launched = marker.exists()
+        if launch and not launched:
+            exe = discover()
+            args = [str(exe), str(copy)]
+            if sys.platform == "darwin":
+                args = ["open", "-a", str(exe.parent.parent.parent), str(copy)]
+            try:
+                with marker.open("x"):
+                    pass
+            except FileExistsError:
+                launched = True
+            else:
+                try:
+                    with (directory / "native.log").open("wb") as log:
+                        process = subprocess.Popen(args, stdin=subprocess.DEVNULL, stdout=log,
+                                                   stderr=subprocess.STDOUT, start_new_session=os.name != "nt")
+                    try:
+                        code = process.wait(timeout=1)
+                        if code != 0:
+                            raise OrcaError(f"Orca GUI exited with code {code}; inspect native.log in the review directory.")
+                    except subprocess.TimeoutExpired:
+                        pass
+                    launched = True
+                except Exception:
+                    marker.unlink(missing_ok=True)
+                    raise
+        return {"project": str(copy), "launch_requested": launched, "print_started": False,
+                "next": "Open this editable copy in Orca's existing window. Prepare provides full object/plate editing; Preview provides full toolpaths. Save edits here, then prepare and re-slice. Repeated calls reuse this copy and never launch another window. Launch is not proof of visual review."}
 
     def export(self, job_id, name, destination):
         source, job = self.artifact(job_id, name)

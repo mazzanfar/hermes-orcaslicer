@@ -40,7 +40,7 @@ def run():
         def preset(kind, name):
             return str(catalog.items[vendor, kind, name][0])
         job = tools.call("orca_prepare", source=str(model), machine=preset("machine", machine),
-                         process=preset("process", process), filaments=[preset("filament", filament)])
+                         process=preset("process", process), filaments=[preset("filament", filament)], arrange=True, orient=True)
         tools.call("orca_slice", job_id=job["id"])
         while True:
             result = tools.call("orca_job", job_id=job["id"])
@@ -59,6 +59,32 @@ def run():
         print(json.dumps({"printer": machine, "job": job["id"], "state": result["state"],
                           "error": result.get("error"), "reports": result.get("reports")}), flush=True)
         results.append(result)
+        if vendor == "Prusa" and result["state"] == "sliced":
+            project = next(a for a in result["artifacts"] if a["name"].endswith(".3mf"))["path"]
+            before = Path(project).read_bytes()
+            review = tools.call("orca_open_native", job_id=job["id"], artifact=Path(project).name)
+            again = tools.call("orca_open_native", job_id=job["id"], artifact=Path(project).name)
+            assert review["project"] == again["project"] and not review["launch_requested"]
+            assert Path(review["project"]).read_bytes() == before
+            inspected = tools.call("orca_inspect", source=project)
+            object_id = inspected["objects"][0]["id"]
+            edited = tools.call("orca_edit_project", source=project, destination=str(base / (job["id"] + "-edited.3mf")),
+                               object_changes={object_id: {"wall_loops": 4}}, instance_changes={"0": {"move_mm": [5, 0, 0], "rotate_deg": [0, 0, 45], "scale": [1.2, 1, 1]}})
+            assert Path(project).read_bytes() == before
+            inspected = tools.call("orca_inspect", source=edited["project"])
+            assert inspected["objects"][0]["settings"]["wall_loops"] == "4"
+            edited_job = tools.call("orca_prepare", source=edited["project"])
+            tools.call("orca_slice", job_id=edited_job["id"])
+            while True:
+                edited_result = tools.call("orca_job", job_id=edited_job["id"])
+                if edited_result["state"] != "slicing":
+                    break
+                time.sleep(0.2)
+            assert edited_result["state"] == "sliced", edited_result
+            final_project = next(a["path"] for a in edited_result["artifacts"] if a["name"].endswith(".3mf"))
+            assert tools.call("orca_inspect", source=final_project)["objects"][0]["settings"]["wall_loops"] == "4"
+            results.append(edited_result)
+            print(json.dumps({"editing_workflow": "passed", "job": edited_job["id"]}), flush=True)
     (base / "results.json").write_text(json.dumps(results, indent=2))
     return 0 if all(r["state"] == "sliced" for r in results) else 1
 

@@ -7,7 +7,8 @@
 1. `profiles.py`: discover installed profile roots, resolve vendor-scoped inheritance, inspect 3MF settings, validate bounded edits. Names come from preset JSON rather than filenames. Missing parents are errors; no cross-vendor fallback when ambiguous.
 2. `slicer.py`: discover/check the stock binary, create immutable-by-contract job input copies, execute CLI slicing, collect artifacts and inspect G-code metadata. No machine model allow-list. An explicit compatible-printer list is checked, but Orca remains the slicer and configuration validator.
 3. `preview.py`: a portable SVG of linear extrusion for a selected layer. Reports omitted arc/coordinate semantics. It is not a replacement for Orca's native 3D preview.
-4. `printers.py`: profile-bound connection records and capability-specific protocol adapters. Local file export is universal. Direct upload/start/status depends on the connection type.
+4. `project.py`: bounded object settings and build-instance transforms in a new 3MF. Original mesh payloads remain untouched; cached toolpaths are removed. `orca_open_native` supplies one reusable editable copy per sliced job; launching is explicit and idempotent.
+5. `printers.py`, `http_printers.py`, `bambu.py`: profile-bound connection records and capability-specific protocol adapters. Local file export is universal. Direct upload/start/status depends on the connection type.
 
 ## Job states
 
@@ -21,7 +22,9 @@ Remote receipts progress `uploaded → start_outcome_unknown → start_accepted`
 
 Stock Orca's CLI flags differ between releases. `orca_diagnose` checks required flags. Linux GUI-linked builds may need Xvfb. The CLI and preset format are tested against OrcaSlicer 2.4.2 on macOS; other OS builds need live validation in addition to unit CI.
 
-Built-in configuration assets are not copied into this repository. A saved 3MF is preferred for printer-specific customizations, multi-material mapping and unusual profiles. Existing object/plate overrides are preserved. Arbitrary geometry transformations and arbitrary G-code execution are deliberately absent from the first release.
+Built-in configuration assets are not copied into this repository. A saved 3MF is preferred for printer-specific customizations, multi-material mapping and unusual profiles. Existing object/plate overrides are preserved. Bounded move/rotate/scale operations affect selected build instances; advanced painting, modifiers, material layout and complete toolpath rendering remain in native Orca. Edits there must be saved and prepared/sliced as a new job. No arbitrary G-code execution tool is exposed.
+
+See [connection protocols and their limits](CONNECTIONS.md) and [hardware evidence](HARDWARE_VALIDATION.md).
 
 ## Upstream references
 

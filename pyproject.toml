@@ -26,3 +26,6 @@ include = ["orca_plugin*"]
 
 [tool.setuptools.package-data]
 orca_plugin = ["SKILL.md"]
+
+[project.optional-dependencies]
+bambu = ["paho-mqtt>=2.1,<3"]

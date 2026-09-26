@@ -141,7 +141,12 @@ def inspect_project(source: str):
         pass
     except ET.ParseError as exc:
         raise OrcaError("Invalid object settings XML.") from exc
-    return {"source": str(path), "settings": {k: data[k] for k in SUMMARY_KEYS if k in data},
+    from .project import instances
+    try:
+        build = instances(path)
+    except KeyError:
+        build = []
+    return {"source": str(path), "instances": build, "settings": {k: data[k] for k in SUMMARY_KEYS if k in data},
             "objects": overrides, "note": "Object and plate overrides may supersede global settings. Validate the sliced result."}
 
 

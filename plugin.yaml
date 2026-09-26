@@ -8,6 +8,9 @@ author: mazzanfar
 homepage: https://github.com/mazzanfar/hermes-orcaslicer
 tags: [3d-printing, orcaslicer, slicing, printers]
 provides_tools:
+  - orca_capabilities
+  - orca_edit_project
+  - orca_open_native
   - orca_diagnose
   - orca_presets
   - orca_inspect
