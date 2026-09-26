@@ -2,7 +2,7 @@
 
 A native Hermes plugin for preparing, slicing, reviewing and exporting 3D prints with **stock OrcaSlicer**. It uses OrcaSlicer's own installed printer, process and filament profiles—including custom presets—instead of maintaining a separate list of printer models.
 
-**Status: 0.2.0 preview.** Real slicing has been exercised on macOS with OrcaSlicer 2.4.2 and Bambu P1S, Prusa MK4 and Creality Ender-3 V3 profiles. These are slicing tests, not physical print certifications. Bambu LAN, PrusaLink, Duet and modern Flashforge HTTP adapters now join OctoPrint and Moonraker. Network adapters have protocol simulation tests; those tests do not certify particular hardware or firmware. See [validation](docs/VALIDATION.md).
+**Status: 0.2.0 preview.** Real slicing has been exercised on macOS and Linux with OrcaSlicer 2.4.2 and Bambu P1S, Prusa MK4 and Creality Ender-3 V3 profiles. These are slicing tests, not physical print certifications. Bambu LAN, PrusaLink, Duet and modern Flashforge HTTP adapters now join OctoPrint and Moonraker. Network adapters have protocol simulation tests; those tests do not certify particular hardware or firmware. See [validation](docs/VALIDATION.md).
 
 ## What works
 
@@ -77,7 +77,7 @@ The plugin discovers normal macOS/Windows/Linux installations. Override paths wh
 | `HERMES_ORCA_HOME` | Plugin state directory; defaults to `~/.hermes-orca` |
 | Your chosen API-key variable | Secret used by a configured printer; its value is never an agent tool argument |
 
-Set these in the environment inherited by Hermes. Desktop applications may not inherit terminal environment settings.
+Set these in the environment inherited by Hermes. Desktop applications may not inherit terminal environment settings. Linux AppImages or custom launcher scripts may need an explicit `ORCA_PROFILES_DIR` pointing to their resource profiles; a minimal Linux host also needs Orca’s system libraries. `orca_diagnose` reports whether the executable can run and which profile roots were found.
 
 Jobs live under `~/.hermes-orca/jobs/<id>/`. Each includes an input copy, resolved presets when supplied, a manifest, the exact command, a local slicing log and output artifacts. Printer records contain a URL and a secret **variable name**, not the secret. Nothing contacts a printer until a network tool is called. Registering the plugin performs no network or subprocess work.
 

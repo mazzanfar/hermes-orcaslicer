@@ -2,7 +2,7 @@
 
 Date: 2026-09-26. Preview release. This record focuses on reproducible offline and simulated-protocol checks; it is not hardware certification.
 
-The current acceptance suite has 14 tests and uses registered plugin handlers. It passes locally; the prior implementation passed all six Linux/macOS/Windows × Python 3.11/3.13 CI combinations. CI runs Python and simulated printer protocols, not the Orca application. Release checks additionally use actual Hermes and stock OrcaSlicer as described below.
+The current acceptance suite has 14 tests and uses registered plugin handlers. It passes locally and all six Linux/macOS/Windows × Python 3.11/3.13 CI combinations passed for the 0.2.0 candidate ([run 36279726356](https://github.com/mazzanfar/hermes-orcaslicer/actions/runs/36279726356)). CI runs Python and simulated printer protocols, not the Orca application. Release checks additionally use actual Hermes and stock OrcaSlicer as described below.
 
 ## Executed locally
 
@@ -46,3 +46,8 @@ These are release limitations, not silently passing tests. Hardware testers shou
 - The clean-install check exposed that an optional Bambu dependency was not installed by Hermes. Version 0.2.0 moves bounded `paho-mqtt>=2.1,<3` into the base dependencies; `[bambu]` remains an alias for older install instructions.
 
 Camera framing, bounded reads, separate HTTP credentials, TLS identity checks, monitoring job identity and cancellation inference across a restarted client are exercised in the existing protocol workflows. These checks do not certify image contents, capture freshness or physical bed readiness.
+
+- A complete Hermes model conversation discovered the exact Prusa profiles, prepared and sliced a generated cube, polled completion, generated a first-layer SVG, checked explicit-plate preflight and exported both G-code and sliced 3MF. The isolated conversation record confirms calls to the registered plugin tools and `skill_view`.
+- A separate model conversation read a loopback Moonraker simulator twice, reported unchanged telemetry, fetched the generated 8×8 JPEG fixture and inspected it with Hermes vision. It described a solid-color image and did not infer bed readiness. The server recorded exactly two status GETs and one snapshot GET, with zero start commands. This is agent integration coverage, not hardware evidence.
+- Installing the 0.2.0 candidate through Hermes prepared `paho-mqtt` 2.1.0 automatically in its managed runtime. Validation remained green with a `safe` scan and no warnings. Job state outside the installed source survived replacement.
+- The 0.2.0 wheel contains the bundled skill and bounded base MQTT dependency and excludes tests, private session records and credentials.
