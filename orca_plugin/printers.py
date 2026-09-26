@@ -18,6 +18,7 @@ import uuid
 from pathlib import Path
 
 from .common import OrcaError, identifier, read_json, sha256, write_json
+from .monitoring import number, percent, phase
 
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -88,12 +89,19 @@ class Moonraker:
         self.http = http
 
     def status(self):
-        result = self.http.request("GET", "/printer/objects/query?print_stats&webhooks&virtual_sdcard")["result"]["status"]
+        result = self.http.request("GET", "/printer/objects/query?print_stats&webhooks&virtual_sdcard&extruder&heater_bed")["result"]["status"]
         state = result.get("print_stats", {}).get("state", "unknown")
         ready = result.get("webhooks", {}).get("state") == "ready"
         return {"state": state, "ready_to_start": ready and state in {"standby", "complete", "cancelled"},
                 "filename": result.get("print_stats", {}).get("filename"),
-                "progress": result.get("virtual_sdcard", {}).get("progress")}
+                "progress": result.get("virtual_sdcard", {}).get("progress"),
+                "progress_percent": percent(result.get("virtual_sdcard", {}).get("progress"), 100),
+                "elapsed_seconds": number(result.get("print_stats", {}).get("print_duration")),
+                "message": result.get("print_stats", {}).get("message"),
+                "layer": result.get("print_stats", {}).get("info", {}).get("current_layer"),
+                "total_layers": result.get("print_stats", {}).get("info", {}).get("total_layer"),
+                "temperatures": {label: {"actual": number(result.get(key, {}).get("temperature")), "target": number(result.get(key, {}).get("target"))}
+                                 for label, key in (("nozzle", "extruder"), ("bed", "heater_bed"))}}
 
     def upload(self, path, filename):
         result = self.http.upload("/server/files/upload", path, filename, {"root": "gcodes"})
@@ -118,7 +126,13 @@ class OctoPrint:
         flags = printer.get("state", {}).get("flags", {})
         busy = any(flags.get(k) for k in ("printing", "paused", "pausing", "cancelling", "error", "closedOrError"))
         return {"state": job.get("state", "unknown"), "ready_to_start": bool(flags.get("operational")) and not busy,
-                "filename": job.get("job", {}).get("file", {}).get("name"), "progress": job.get("progress", {}).get("completion")}
+                "filename": job.get("job", {}).get("file", {}).get("name"), "progress": job.get("progress", {}).get("completion"),
+                "progress_percent": percent(job.get("progress", {}).get("completion")),
+                "elapsed_seconds": number(job.get("progress", {}).get("printTime")),
+                "remaining_seconds": number(job.get("progress", {}).get("printTimeLeft")),
+                "temperatures": {k: {"actual": number(v.get("actual")), "target": number(v.get("target"))}
+                                 for k, v in printer.get("temperature", {}).items() if isinstance(v, dict)},
+                "error": bool(flags.get("error") or flags.get("closedOrError"))}
 
     def upload(self, path, filename):
         result = self.http.upload("/api/files/local", path, filename, {"select": "false", "print": "false"})
@@ -194,8 +208,57 @@ class Printers:
     def status(self, name):
         config = self.config(name)
         if config["kind"] == "file":
-            return {"state": "manual_handoff", "capabilities": ["export"], "print_started": False}
-        return self.adapter(config).status()
+            return {"state": "manual_handoff", "phase": "manual_handoff", "ready_to_start": False,
+                    "observed_at": time.time(), "capabilities": ["export"], "print_started": False}
+        result = self.adapter(config).status()
+        result["observed_at"] = time.time()
+        result["phase"] = phase(result.get("state"))
+        if result.get("error") or result.get("error_code") not in (None, 0, "0"):
+            result["ready_to_start"] = False
+        result["requires_attention"] = result["phase"] in {"error", "paused"} or bool(result.get("error")) or result.get("error_code") not in (None, 0, "0")
+        return result
+
+    def snapshot(self, name):
+        from .camera import bambu_frame, http_frame, image_type
+        config = self.config(name)
+        options = config.get("options", {})
+        if options.get("camera_url"):
+            data = http_frame(options)
+        elif config["kind"] == "bambu_lan" and options.get("camera_protocol") == "bambu_jpeg":
+            data = bambu_frame(self.adapter(config))
+        else:
+            raise OrcaError("No supported camera configured. Set camera_url for an HTTP JPEG/PNG snapshot, or camera_protocol=bambu_jpeg for a P1/A1. RTSPS is not implemented.")
+        suffix, mime = image_type(data)
+        directory = self.base / "snapshots"
+        directory.mkdir(parents=True, exist_ok=True, mode=0o700)
+        path = directory / (uuid.uuid4().hex + "." + suffix)
+        with os.fdopen(os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), "wb") as target:
+            target.write(data)
+        return {"printer": name, "path": str(path), "mime_type": mime, "bytes": len(data), "sha256": sha256(path),
+                "received_at": time.time(), "freshness": "Received on a new request; camera capture time is unknown.",
+                "physical_readiness_verified": False, "note": "Private local snapshot. Inspect visually; a picture cannot certify a clean plate or safe print."}
+
+    def monitor(self, name, receipt_id=None):
+        receipt = None
+        if receipt_id is not None:
+            receipt = read_json(self.base / "receipts" / f"{identifier(receipt_id)}.json")
+            if receipt["printer"] != name or receipt["config"] != self.config(name):
+                raise OrcaError("Receipt does not match the configured destination.")
+        status = self.status(name)
+        path = self.base / "monitor" / f"{identifier(name)}.json"
+        previous = read_json(path) if path.exists() else {}
+        tracked = {key: status.get(key) for key in ("state", "phase", "filename", "progress_percent", "layer", "error_code", "error", "hms", "requires_attention")}
+        changed = [key for key in tracked if tracked[key] != previous.get(key)]
+        write_json(path, tracked)
+        result = {"printer": name, "status": status, "changed_fields": changed, "first_observation": not previous,
+                  "background_monitoring": False, "note": "One read-only observation. Call again to follow progress; this tool does not schedule notifications."}
+        if receipt:
+            filename = str(status.get("filename") or "").replace("\\", "/").rsplit("/", 1)[-1]
+            expected = receipt["remote"].replace("\\", "/").rsplit("/", 1)[-1]
+            match = "unknown" if not filename else "match" if filename == expected else "different_job"
+            result.update(receipt_id=receipt_id, job_match=match,
+                          job_outcome=status["phase"] if match == "match" and status.get("telemetry_fresh", True) else "unknown")
+        return result
 
     def preflight(self, job_id, artifact, name=None, expected_bed_type=None):
         from .preflight import review

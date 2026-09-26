@@ -1,5 +1,6 @@
 """Bambu LAN MQTT/implicit FTPS. No cloud login, insecure TLS, or automatic replay."""
 import ftplib
+import copy
 import hashlib
 import json
 import re
@@ -13,6 +14,7 @@ import zipfile
 
 from .common import OrcaError
 from .http_printers import secret
+from .monitoring import merge_delta, number, percent
 
 
 COMMAND_TIMEOUT = 15
@@ -123,7 +125,7 @@ class BambuLAN:
                     return
                 with self.changed:
                     if data.get("command") == "push_status":
-                        self.telemetry.update(data)
+                        merge_delta(self.telemetry, data)
                         self.last_seen = time.monotonic()
                     elif "sequence_id" in data:
                         self.replies[str(data["sequence_id"])] = data
@@ -162,12 +164,26 @@ class BambuLAN:
         with self.changed:
             while (not self.telemetry.get("gcode_state") or time.monotonic() - self.last_seen > 15) and time.monotonic() < deadline:
                 self.changed.wait(max(0, deadline - time.monotonic()))
-            data = dict(self.telemetry)
+            data = copy.deepcopy(self.telemetry)
             fresh = time.monotonic() - self.last_seen <= 15 and self.client.is_connected()
         state = data.get("gcode_state", "UNKNOWN")
+        trays = []
+        for ams in data.get("ams", {}).get("ams", []):
+            for tray in ams.get("tray", []):
+                trays.append({"ams_id": ams.get("id"), "tray_id": tray.get("id"), "material": tray.get("tray_type"),
+                              "color": tray.get("tray_color"), "remaining_percent": percent(tray.get("remain"))})
         return {"state": state if fresh else "UNKNOWN", "ready_to_start": fresh and state in {"IDLE", "FINISH"} and data.get("print_error", 0) in (0, "0") and data.get("sdcard") is True,
-                "progress": data.get("mc_percent"), "filename": data.get("gcode_file"), "remaining_minutes": data.get("mc_remaining_time"),
-                "nozzle_diameter": data.get("nozzle_diameter"), "telemetry_fresh": fresh}
+                "progress": number(data.get("mc_percent")), "progress_percent": percent(data.get("mc_percent")),
+                "filename": data.get("gcode_file") or data.get("subtask_name"), "remaining_minutes": number(data.get("mc_remaining_time")),
+                "remaining_seconds": number(data.get("mc_remaining_time"), 60),
+                "nozzle_diameter": data.get("nozzle_diameter"), "telemetry_fresh": fresh,
+                "telemetry_age_seconds": round(time.monotonic() - self.last_seen, 2),
+                "layer": data.get("layer_num"), "total_layers": data.get("total_layer_num"),
+                "temperatures": {"nozzle": {"actual": number(data.get("nozzle_temper")), "target": number(data.get("nozzle_target_temper"))},
+                                 "bed": {"actual": number(data.get("bed_temper")), "target": number(data.get("bed_target_temper"))}},
+                "error_code": data.get("print_error"), "hms": data.get("hms", []),
+                "stage_code": data.get("stg_cur"), "ams_trays": trays,
+                "note": "Temperatures and material entries are last-reported telemetry; freshness does not certify physical readiness."}
 
     def validate_job(self, path, job):
         plate_path = f'Metadata/plate_{job["plate"]}.gcode'

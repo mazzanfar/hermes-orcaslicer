@@ -17,6 +17,8 @@ A native Hermes plugin for preparing, slicing, reviewing and exporting 3D prints
 - Select the physical plate explicitly and review sliced plate/nozzle/material temperatures and destination mapping before upload. An expected-plate mismatch blocks transfer before network access.
 - Export verified G-code or sliced 3MF for SD/USB/native upload.
 - Upload, explicitly start, monitor, pause/resume/cancel through the implemented protocols below.
+- Capture a private local camera snapshot through an explicit HTTP(S) JPEG/PNG URL or a Bambu P1/A1 TLS camera connection.
+- Read richer telemetry and changes since the previous observation; optionally match an upload receipt to the reported job filename.
 
 No mouse automation, modified slicer build, bundled firmware, model service, are required. Bambu LAN uses the optional `paho-mqtt` dependency; other workflows use the Python standard library. You install OrcaSlicer separately. This project is independent of Nous Research and the OrcaSlicer project.
 
@@ -95,6 +97,14 @@ Pass `bed_type` to `orca_prepare` to select the physical plate instead of accept
 
 Preflight reads slicer metadata; custom firmware macros may alter actual temperatures. It does not inspect the camera or certify a clean/empty bed, loaded material, geometry, adhesion or mechanical strength. Confirm physical readiness separately.
 
+### Camera and monitoring
+
+Configure `options.camera_url` for a direct HTTP(S) JPEG/PNG snapshot endpoint. Camera credentials are separate: `camera_api_key_env` names an optional X-Api-Key secret, and printer credentials are never forwarded to the camera. URLs must not embed credentials. Redirects are rejected. For a Bambu P1/A1, select `camera_protocol: "bambu_jpeg"` instead; it uses the configured printer CA, serial and access-code environment variable, with verified TLS on port 6000 (`camera_port` can override it). RTSP/RTSPS, cloud relay and continuous streaming are not implemented.
+
+`orca_camera_snapshot(name=...)` saves one bounded image under the local state directory and returns its path for inspection. Images are private by default and are not published. A new request does not prove the camera image itself is current. Cropped, dark or obstructed images cannot establish that the bed is clear, and cameras cannot reliably certify grease-free surfaces.
+
+`orca_monitor(name=..., receipt_id=...)` reads status and reports changed fields since the previous observation. Normalized `progress_percent` is 0–100 where supported; missing readings stay unknown. Temperatures, layers, remaining time and error details depend on the protocol. Bambu includes freshness and AMS tray telemetry; nested status deltas are merged. Receipt tracking reports an unknown job outcome if the filename is absent or belongs to a different job. A finished state or 100% alone does not establish that a requested job completed. This tool is a single read; scheduling and notifications remain the agent host's responsibility.
+
 The SVG is a lightweight linear-extrusion review aid. It omits arcs and does not model every firmware command/tool offset; limitations are returned with it. Use `orca_open_native` to create/reuse a review copy; open it in the existing Orca window for full review. Set `launch=true` only when a launch is wanted; repeated calls do not create new copies or launch additional windows. No result certifies adhesion, mechanical strength, dimensional fit or arbitrary G-code safety. Times are the slicer's estimates; unknown macro duration can make them inaccurate.
 
 ## Tools
@@ -113,6 +123,8 @@ The SVG is a lightweight linear-extrusion review aid. It omits arcs and does not
 | `orca_export` | Copy a verified artifact to a new destination |
 | `orca_printer_configure` / `orca_printers` | Configure/list explicit connections |
 | `orca_printer_status` | Read hardware status |
+| `orca_camera_snapshot` | Capture one local camera image for inspection |
+| `orca_monitor` | Rich status, changes and optional receipt/job matching |
 | `orca_preflight` | Offline review of sliced settings, expected plate and destination mapping |
 | `orca_upload` | Upload without printing |
 | `orca_start` | Submit a reviewed upload once |
@@ -142,3 +154,5 @@ python -m orca_plugin.cli orca_slice '{"job_id":"ID_FROM_PREPARE"}' --wait
 Opt-in real CLI tests: `python -m tests.live_slicer`. They generate a 5 mm cube, arrange/orient and slice with installed Prusa and Creality profiles, edit/reslice object settings and geometry, preview/export, and verify reusable review copies. They never contact a printer or launch GUI windows. On Linux a display or `xvfb-run` may be needed, depending on the Orca build. macOS app execution under a restrictive sandbox may abort even when `--help` works; run the smoke test in a normal local terminal.
 
 See [architecture](docs/ARCHITECTURE.md), [security and job semantics](SECURITY.md), [contributing](CONTRIBUTING.md), and [release checklist](docs/RELEASING.md).
+
+For opt-in read-only hardware validation, configure the real connection and run `python -m tests.live_printer --name PRINTER --camera`. Omit `--camera` when unavailable; optionally pass `--receipt ID` to check job identity. `--state-dir` selects another plugin state directory. The runner sends no upload/start/control commands and writes a private local JSON report. Sharing reports or camera images is a separate user decision. See [hardware validation guide](docs/HARDWARE_TESTING.md).

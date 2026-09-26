@@ -1,5 +1,6 @@
 """Connection options are explicit, bounded, and contain secret variable names only."""
 import re
+import urllib.parse
 from pathlib import Path
 from .common import OrcaError
 
@@ -12,8 +13,21 @@ def validate_options(kind, options):
         "flashforge_http": {"serial", "access_code_env", "bed_levelling"},
         "bambu_lan": {"serial", "access_code_env", "ca_file", "mqtt_port", "ftps_port", "use_ams", "ams_mapping", "bed_levelling", "flow_cali", "vibration_cali", "timelapse"},
     }
-    if not isinstance(options, dict) or set(options) - allowed[kind]:
+    camera_options = {"camera_url", "camera_api_key_env"}
+    if kind == "bambu_lan":
+        camera_options |= {"camera_protocol", "camera_port"}
+    if not isinstance(options, dict) or set(options) - (allowed[kind] | camera_options):
         raise OrcaError("Unsupported connection options for this protocol.")
+    if options.get("camera_protocol") not in (None, "bambu_jpeg"):
+        raise OrcaError("Supported native camera protocol is bambu_jpeg (P1/A1); RTSPS is not implemented.")
+    if options.get("camera_url"):
+        url = urllib.parse.urlsplit(options["camera_url"])
+        if url.scheme not in {"http", "https"} or not url.hostname or url.username or url.password or url.fragment:
+            raise OrcaError("Use an explicit HTTP(S) snapshot URL without embedded credentials or fragment.")
+        if options.get("camera_protocol"):
+            raise OrcaError("Choose one camera source: camera_url or camera_protocol.")
+    elif options.get("camera_api_key_env"):
+        raise OrcaError("camera_api_key_env requires camera_url.")
     for key, value in options.items():
         if key.endswith("_env") and (not isinstance(value, str) or not re.fullmatch(r"[A-Z_][A-Z0-9_]*", value)):
             raise OrcaError("Credentials must be supplied by environment variable NAME.")
@@ -48,6 +62,10 @@ def validate_options(kind, options):
 
 def capabilities():
     return {"slicing": "Installed Orca printer profiles, including user profiles",
+            "camera": {"protocols": ["explicit HTTP(S) JPEG/PNG snapshot URL", "Bambu P1/A1 TLS JPEG"],
+                       "unsupported": ["RTSP/RTSPS", "cloud relay", "continuous video"],
+                       "physical_readiness_verified": False},
+            "monitoring": "Read-only observations, state changes and optional receipt/filename matching. No background scheduler. Missing fields remain unknown.",
             "connections": {
                 "file": {"artifacts": [".gcode", ".3mf"], "operations": ["export"]},
                 **{kind: {"artifacts": [".gcode"], "operations": ["status", "upload", "start", "pause", "resume", "cancel"], "hardware_validated": False}

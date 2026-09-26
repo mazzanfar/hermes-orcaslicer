@@ -49,9 +49,11 @@ TOOLS = {
                                {"name": prop("Unique printer name"), "kind": prop("Connection type", enum=["file", "moonraker", "octoprint", "prusalink", "duet", "bambu_lan", "flashforge_http"]),
                                 "printer_profile": prop("Exact Orca machine preset name, including nozzle"), "url": prop("HTTP(S) printer base URL for network connections"),
                                 "api_key_env": prop("Environment variable NAME containing API key; not the key"),
-                                "options": prop("Protocol options: Prusa storage/username/password_env; Duet password_env; Flashforge serial/access_code_env/bed_levelling (single-tool external spool); Bambu serial/access_code_env/ca_file/use_ams/ams_mapping and calibration booleans. No secret values.", "object")}),
+                                "options": prop("Protocol options: Prusa storage/username/password_env; Duet password_env; Flashforge serial/access_code_env/bed_levelling; Bambu serial/access_code_env/ca_file/use_ams/ams_mapping/calibration booleans. Optional camera_url and separate camera_api_key_env for HTTP snapshots; Bambu P1/A1 alternatively camera_protocol=bambu_jpeg and optional camera_port. No secret values.", "object")}),
     "orca_printers": ("List configured printer connections and exact profile bindings. Does not discover or scan the network.", {}),
     "orca_printer_status": ("Read printer readiness/progress without changing hardware state. Use after start/control to verify the actual outcome.", {"name": prop("Configured printer name")}),
+    "orca_camera_snapshot": ("Capture one private local JPEG/PNG from the explicitly configured camera. Returns an image path for visual inspection, not a claim that the plate is empty or clean. No streaming or automatic printing.", {"name": prop("Configured printer name")}),
+    "orca_monitor": ("Read status, temperatures, errors and changes since the last observation. Optional receipt checks job identity; missing/mismatched identity means unknown job outcome. One observation only; no background scheduling.", {"name": prop("Configured printer name"), "receipt_id": prop("Optional upload receipt to match against the current filename")}),
     "orca_preflight": ("Review hash-verified sliced plate/nozzle/material/temperature metadata and optional destination/AMS mapping without contacting a printer. Compare expected_bed_type with the actual plate. Does not certify clean bed, live material or toolpath safety.",
                        {"job_id": prop("Sliced job id"), "artifact": prop("Exact sliced .gcode or .3mf artifact"),
                         "name": prop("Optional configured destination"), "expected_bed_type": prop("Physical plate type to compare with sliced output", enum=sorted(BED_TYPES))}),
@@ -70,6 +72,7 @@ REQUIRED = {
     "orca_printer_configure": ["name", "kind", "printer_profile"], "orca_printer_status": ["name"],
     "orca_upload": ["name", "job_id", "artifact"], "orca_start": ["receipt_id", "confirmed"],
     "orca_preflight": ["job_id", "artifact"],
+    "orca_camera_snapshot": ["name"], "orca_monitor": ["name"],
     "orca_printer_control": ["name", "action", "confirmed"],
 }
 
@@ -96,6 +99,7 @@ class Service:
                     "orca_printer_configure": self.printers.configure, "orca_printers": self.printers.list,
                     "orca_printer_status": self.printers.status, "orca_upload": self.printers.upload,
                     "orca_preflight": self.printers.preflight,
+                    "orca_camera_snapshot": self.printers.snapshot, "orca_monitor": self.printers.monitor,
                     "orca_start": self.printers.start, "orca_printer_control": self.printers.control,
                     "orca_preview": self.preview}
         # Export's public name is consistent with upload and preview.

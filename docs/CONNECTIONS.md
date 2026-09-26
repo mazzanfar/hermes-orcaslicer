@@ -2,7 +2,7 @@
 
 Slicing uses Orca's profiles. The connection protocol must match the printer's actual server/firmware. `orca_capabilities` reports implemented operations and limitations. These implementations have simulator tests, not hardware certification. No cloud credentials, LAN scanning, heater controls or arbitrary G-code tool are provided.
 
-Camera access and automatic plate-clear inspection are not implemented. Readiness telemetry cannot establish that a build plate is empty or free of grease and residue. Confirm physical bed readiness separately before starting.
+Camera snapshots are available through an explicitly configured HTTP(S) endpoint or the Bambu P1/A1 TLS JPEG protocol. See the README for setup. Automatic plate-clear certification is not implemented: readiness telemetry and camera images cannot establish that the entire build plate is empty or free of grease and residue. Confirm physical bed readiness separately before starting.
 
 All connections bind to an exact `printer_profile`. `orca_upload` returns a receipt without printing; `orca_start` consumes a reviewed receipt once. `orca_printer_control` accepts pause/resume/cancel. Always observe status after a command: acceptance is not proof of motion or completion.
 

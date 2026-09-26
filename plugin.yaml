@@ -22,6 +22,8 @@ provides_tools:
   - orca_printer_configure
   - orca_printers
   - orca_printer_status
+  - orca_camera_snapshot
+  - orca_monitor
   - orca_preflight
   - orca_upload
   - orca_start

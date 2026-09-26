@@ -6,7 +6,7 @@ The original 24-test suite passed locally and in all six CI combinations: Linux,
 
 ## Executed locally
 
-- Native Hermes `plugins doctor . --ci`: passes actual discovery, manifest parsing, namespaced import and registration of 18 tools. This caught and corrected a real skill-registration path type mismatch.
+- Native Hermes `plugins doctor . --ci`: passes actual discovery, manifest parsing, namespaced import and registration of 20 tools. This caught and corrected a real skill-registration path type mismatch.
 - Stock OrcaSlicer 2.4.2 on macOS: executable discovery and required CLI flags verified.
 - Bambu Lab P1S 0.4 nozzle: an existing saved project was copied, edited and sliced through the stock CLI. G-code and sliced 3MF were produced; source remained separate. The user's project is not included in this repository.
 - Prusa MK4 0.4 nozzle: a generated 5 mm cube was sliced from raw STL using resolved stock machine, process and PLA profiles. G-code and sliced 3MF produced; first-layer SVG and verified export exercised.

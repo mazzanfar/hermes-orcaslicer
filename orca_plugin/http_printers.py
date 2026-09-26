@@ -3,6 +3,7 @@ import os
 import re
 import urllib.parse
 from .common import OrcaError
+from .monitoring import number
 
 
 def secret(options, name, default=None):
@@ -22,7 +23,12 @@ class PrusaLink:
         result = self.http.request("GET", "/api/v1/status")
         state = result.get("printer", {}).get("state", "UNKNOWN")
         return {"state": state, "ready_to_start": state in {"IDLE", "READY", "FINISHED", "STOPPED"},
-                "job_id": result.get("job", {}).get("id"), "progress": result.get("job", {}).get("progress")}
+                "job_id": result.get("job", {}).get("id"), "progress": result.get("job", {}).get("progress"),
+                "progress_percent": number(result.get("job", {}).get("progress")),
+                "remaining_seconds": number(result.get("job", {}).get("time_remaining")),
+                "temperatures": {label: {"actual": number(result.get("printer", {}).get("temp_" + key)),
+                                          "target": number(result.get("printer", {}).get("target_" + key))}
+                                 for label, key in (("nozzle", "nozzle"), ("bed", "bed"))}}
 
     def upload(self, path, filename):
         if path.stat().st_size > 256 * 1024 * 1024:
@@ -118,7 +124,8 @@ class Flashforge:
         detail = self.request("/detail").get("detail", {})
         state = detail.get("status", "unknown")
         return {"state": state, "ready_to_start": state == "ready" and not detail.get("errorCode"),
-                "progress": detail.get("printProgress"), "filename": detail.get("printFileName"), "firmware": detail.get("firmwareVersion")}
+                "progress": detail.get("printProgress"), "filename": detail.get("printFileName"), "firmware": detail.get("firmwareVersion"),
+                "error_code": detail.get("errorCode")}
 
     def validate_job(self, path, job):
         with path.open(errors="replace") as source:
