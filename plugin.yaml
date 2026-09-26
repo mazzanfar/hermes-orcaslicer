@@ -1,5 +1,5 @@
 name: orcaslicer
-version: "0.1.0"
+version: "0.2.0"
 description: "Prepare, slice, preflight and export with OrcaSlicer profiles; upload and control printers through supported network protocols."
 manifest_version: 2
 api_version: 1

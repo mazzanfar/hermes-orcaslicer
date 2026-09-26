@@ -2,7 +2,7 @@
 
 A native Hermes plugin for preparing, slicing, reviewing and exporting 3D prints with **stock OrcaSlicer**. It uses OrcaSlicer's own installed printer, process and filament profiles—including custom presets—instead of maintaining a separate list of printer models.
 
-**Status: development preview (after 0.1.0).** Real slicing has been exercised on macOS with OrcaSlicer 2.4.2 and Bambu P1S, Prusa MK4 and Creality Ender-3 V3 profiles. These are slicing tests, not physical print certifications. Bambu LAN, PrusaLink, Duet and modern Flashforge HTTP adapters now join OctoPrint and Moonraker. Network adapters have protocol simulation tests; physical printer validation is still needed. See [validation](docs/VALIDATION.md).
+**Status: 0.2.0 preview.** Real slicing has been exercised on macOS with OrcaSlicer 2.4.2 and Bambu P1S, Prusa MK4 and Creality Ender-3 V3 profiles. These are slicing tests, not physical print certifications. Bambu LAN, PrusaLink, Duet and modern Flashforge HTTP adapters now join OctoPrint and Moonraker. Network adapters have protocol simulation tests; those tests do not certify particular hardware or firmware. See [validation](docs/VALIDATION.md).
 
 ## What works
 
@@ -20,7 +20,7 @@ A native Hermes plugin for preparing, slicing, reviewing and exporting 3D prints
 - Capture a private local camera snapshot through an explicit HTTP(S) JPEG/PNG URL or a Bambu P1/A1 TLS camera connection.
 - Read richer telemetry and changes since the previous observation; optionally match an upload receipt to the reported job filename.
 
-No mouse automation, modified slicer build, bundled firmware, model service, are required. Bambu LAN uses the optional `paho-mqtt` dependency; other workflows use the Python standard library. You install OrcaSlicer separately. This project is independent of Nous Research and the OrcaSlicer project.
+No mouse automation, modified slicer build, bundled firmware or model service is required. The base installation includes `paho-mqtt` for Bambu LAN; other workflows use the Python standard library. You install OrcaSlicer separately. This project is independent of Nous Research and the OrcaSlicer project.
 
 ## Printer support: profiles versus connections
 
@@ -37,7 +37,7 @@ No mouse automation, modified slicer build, bundled firmware, model service, are
 | Flashforge modern HTTP | Yes | Single-tool external-spool G-code | Implemented; hardware validation pending |
 | Other cloud/vendor protocols and Flashforge material stations/legacy TCP | Yes, with an appropriate Orca profile | Native application/manual handoff | Not implemented |
 
-An Orca printer preset is not a network API. File handoff is intentionally reported as `manual_handoff`, never “printing.” Do not route a proprietary printer through an unrelated adapter. See [connection setup and protocol limits](docs/CONNECTIONS.md). The P1S LAN implementation needs live validation; [hardware progress](docs/HARDWARE_VALIDATION.md) is tracked separately.
+An Orca printer preset is not a network API. File handoff is intentionally reported as `manual_handoff`, never “printing.” Do not route a proprietary printer through an unrelated adapter. See [connection setup and protocol limits](docs/CONNECTIONS.md). Use the [hardware acceptance checklist](docs/HARDWARE_VALIDATION.md) to validate your model and firmware.
 
 ## Install in Hermes
 
@@ -48,7 +48,7 @@ hermes plugins install mazzanfar/hermes-orcaslicer
 hermes plugins enable orcaslicer
 ```
 
-This is a **repository installation**, not an official catalog entry. Follow Hermes' plugin installation review. Restart your Hermes session after enabling it.
+This is a **repository installation**, not an official catalog entry. Follow Hermes' plugin installation review. Restart your Hermes session after enabling it. Load `orcaslicer:workflow` with Hermes’ skill tool before a printing workflow.
 
 Hermes may report caution findings because the plugin invokes the local slicer and its test suite exercises rejection of invalid paths. Review the files it identifies and keep the scanner enabled.
 
@@ -132,12 +132,12 @@ The SVG is a lightweight linear-extrusion review aid. It omits arcs and does not
 
 ## Develop and test
 
-Python 3.11+; install `.[bambu]` to include Bambu MQTT. TLS acceptance testing also uses the OpenSSL command-line utility.
+Python 3.11+; the base installation includes Bambu MQTT. TLS acceptance testing also uses the OpenSSL command-line utility.
 
 ```sh
 git clone https://github.com/mazzanfar/hermes-orcaslicer.git
 cd hermes-orcaslicer
-python -m pip install ".[bambu]"
+python -m pip install .
 python -m unittest discover -s tests -v
 hermes plugins doctor . --ci
 python -m orca_plugin.cli orca_diagnose

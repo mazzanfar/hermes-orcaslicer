@@ -15,3 +15,7 @@ Only a successful Orca exit with actual G-code yields a `sliced` job. Failures, 
 Physical print operations have no exactly-once guarantee across a network. `start_accepted` means a server acknowledged the request, not that material is extruding. Poll status. A printer can change state after the readiness check; its own firmware/server remains responsible for rejecting an incompatible transition.
 
 To report a vulnerability, use GitHub's private vulnerability reporting if enabled. Otherwise contact the maintainer privately before disclosing exploitable details. Do not put access keys, raw printer responses, IP addresses or private geometry in public issues.
+
+Camera snapshots remain in the local state directory until the user removes them; there is no automatic upload or retention cleanup. HTTP camera credentials use a separate environment variable and are never inherited from printer authentication. Image framing and size are checked, but a snapshot is not proof of its capture time or physical bed readiness.
+
+Monitoring records contain selected telemetry and filenames. Bambu cancellation context is retained locally for at most one hour of inference and only applies to the same configured printer and job filename after an acknowledged cancel. It does not authorize another print or retry.

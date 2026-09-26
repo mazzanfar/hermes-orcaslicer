@@ -2,7 +2,7 @@
 
 Date: 2026-09-26. Preview release. This record focuses on reproducible offline and simulated-protocol checks; it is not hardware certification.
 
-The original 24-test suite passed locally and in all six CI combinations: Linux, macOS and Windows, each with Python 3.11 and 3.13. Wheel installation and its Hermes entry point/bundled skill were verified in an isolated Python environment. Installation from the public GitHub repository, with Hermes security scanning enabled, and Plugin Doctor against that installed copy both passed in a disposable Hermes home. The user's active Hermes installation was not changed.
+The current acceptance suite has 14 tests and uses registered plugin handlers. It passes locally; the prior implementation passed all six Linux/macOS/Windows × Python 3.11/3.13 CI combinations. CI runs Python and simulated printer protocols, not the Orca application. Release checks additionally use actual Hermes and stock OrcaSlicer as described below.
 
 ## Executed locally
 
@@ -27,12 +27,22 @@ The Prusa profile reported a long first-layer/startup estimate for a tiny cube. 
 
 ## Not yet established
 
-- Physical print quality, fit, strength or hardware behavior on any printer.
+- Broad physical print quality, fit, strength or hardware/firmware compatibility. Private development sessions are not a public certification program.
 - Broad hardware/firmware validation of uploads, start and pause/resume/cancel. Protocol simulations alone do not establish this.
-- Real Orca CLI execution on Linux and Windows. Cross-platform unit CI does not establish this.
-- Hardware compatibility of the newly implemented Bambu LAN, PrusaLink, Duet and Flashforge HTTP adapters. Bambu cloud and other unimplemented protocols remain unavailable.
+- Real Orca CLI execution on Windows. Cross-platform Python CI does not establish this.
+- General hardware compatibility across Bambu LAN, PrusaLink, Duet and Flashforge HTTP models and firmware versions. Bambu cloud and other unimplemented protocols remain unavailable.
 - All unusual Orca profiles, conditional compatibility expressions, toolchangers and multi-material layouts.
 - Automated understanding of complete geometry/support/arc visualization. Full interactive review is provided by native Orca; the plugin SVG remains a linear toolpath aid. Native launch is not proof of review.
 - Hermes official catalog review or acceptance.
 
 These are release limitations, not silently passing tests. Hardware testers should report printer model, firmware/server version, Orca version, nozzle/material, operating system and exact observed operation, omitting secrets and private files.
+
+## 0.2.0 release acceptance
+
+- Stock OrcaSlicer 2.4.2 on Ubuntu 24.04: the same `tests.live_slicer` workflow passed for Prusa MK4, Creality Ender-3 V3 and Bambu P1S presets. All four slices, including the edited Prusa project, completed. Explicit plate preflight, linear preview, unchanged source and byte-identical export assertions passed. This was offline slicing of a generated cube, with no printer contact.
+- The Linux AppImage needed additional shared libraries on a minimal host. The acceptance environment extracted these privately and used `ORCA_SLICER_PATH`, `ORCA_PROFILES_DIR` and its library path explicitly. This does not establish automatic AppImage discovery or compatibility with every Linux distribution.
+- A clean named Hermes profile installed the pinned public plugin with the normal installer and scanning enabled. A real model conversation loaded `orcaslicer:workflow` and invoked registered capability and diagnosis tools. No running gateway was restarted.
+- Current Hermes catalog validation reported every check passing, including actual registration/capability matching and a `safe` security scan with no warnings. Plugin Doctor registered all 20 tools; compatibility scanning found no deprecated imports.
+- The clean-install check exposed that an optional Bambu dependency was not installed by Hermes. Version 0.2.0 moves bounded `paho-mqtt>=2.1,<3` into the base dependencies; `[bambu]` remains an alias for older install instructions.
+
+Camera framing, bounded reads, separate HTTP credentials, TLS identity checks, monitoring job identity and cancellation inference across a restarted client are exercised in the existing protocol workflows. These checks do not certify image contents, capture freshness or physical bed readiness.
