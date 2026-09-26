@@ -211,6 +211,18 @@ class Printers:
             return {"state": "manual_handoff", "phase": "manual_handoff", "ready_to_start": False,
                     "observed_at": time.time(), "capabilities": ["export"], "print_started": False}
         result = self.adapter(config).status()
+        # Some Bambu firmware clears its cancellation code but retains FAILED.
+        # Only recover cancellation from our accepted stop of this exact job;
+        # never suppress a current non-cancellation fault or a different job.
+        control_path = self.base / "controls" / f"{identifier(name)}.json"
+        if config["kind"] == "bambu_lan" and result.get("state") == "FAILED" and result.get("error_code") in (None, 0, "0") and not result.get("hms") and control_path.exists():
+            previous = read_json(control_path)
+            if (previous.get("action") == "cancel" and previous.get("accepted") and previous.get("config") == config
+                    and previous.get("before") in {"RUNNING", "PAUSE"} and previous.get("filename")
+                    and previous["filename"] == result.get("filename") and result.get("telemetry_fresh")
+                    and 0 <= time.time() - previous["issued_at"] <= 3600):
+                result["cancelled"] = True
+                result["cancellation_evidence"] = "Matching stopped job after an accepted cancel command; firmware cleared its code."
         result["observed_at"] = time.time()
         result["phase"] = phase(result.get("state"))
         if result.get("cancelled"):
@@ -352,5 +364,17 @@ class Printers:
             raise OrcaError("Action must be pause, resume or cancel.")
         if confirmed is not True:
             raise OrcaError("Printer control requires explicit user intent.")
-        self.adapter(self.config(name)).control(action)
+        config = self.config(name)
+        adapter = self.adapter(config)
+        record = None
+        if config["kind"] == "bambu_lan":
+            before = adapter.status()
+            record = {"action": action, "config": config, "before": before["state"], "filename": before.get("filename"),
+                      "issued_at": time.time(), "accepted": False}
+            path = self.base / "controls" / f"{identifier(name)}.json"
+            write_json(path, record)
+        adapter.control(action)
+        if record is not None:
+            record["accepted"] = True
+            write_json(path, record)
         return {"action": action, "state": "command_accepted", "next": "Poll status to verify."}

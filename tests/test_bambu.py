@@ -57,7 +57,7 @@ class MQTT(TLSHandler):
             payload = struct.pack("!H", len(topic)) + topic + json.dumps({"print": body}).encode()
             sock.sendall(packet(0x30, payload))
         def status():
-            report({"command": "push_status", "gcode_state": s.state, "print_error": 0x0300400C if s.state == "FAILED" else 0, "sdcard": True,
+            report({"command": "push_status", "gcode_state": s.state, "print_error": 0x0300400C if s.state == "FAILED" and not getattr(s, "clear_cancel_code", False) else 0, "sdcard": True,
                     "gcode_file": getattr(s, "filename", ""), "mc_percent": 100 if s.state == "FINISH" else 25,
                     "nozzle_temper": 215, "nozzle_target_temper": 220, "bed_temper": 55, "bed_target_temper": 55,
                     "layer_num": 5, "total_layer_num": 20,
@@ -225,6 +225,15 @@ class BambuWorkflow(Base):
             self.assertEqual(observed["job_outcome"], "cancelled")
             self.assertFalse(observed["status"]["requires_attention"])
             self.assertFalse(observed["status"]["ready_to_start"])
+            self.clear_cancel_code = True
+            observed = Tools(self.base).call("orca_monitor", name="p1s", receipt_id=receipt["receipt_id"])
+            self.assertEqual(observed["status"]["error_code"], 0)
+            self.assertEqual(observed["job_outcome"], "cancelled")
+            saved_filename, self.filename = self.filename, "different-cancelled-job.3mf"
+            observed = Tools(self.base).call("orca_monitor", name="p1s", receipt_id=receipt["receipt_id"])
+            self.assertEqual(observed["status"]["phase"], "error")
+            self.assertEqual(observed["job_outcome"], "unknown")
+            self.filename = saved_filename
             self.state = "IDLE"
             tools = Tools(self.base)
             receipt = tools.call("orca_upload", name="p1s", job_id="job1", artifact=model.name)
