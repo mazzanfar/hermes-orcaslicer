@@ -2,6 +2,8 @@
 
 Date: 2026-09-26. Preview release; no physical print was started as part of development.
 
+The 24-test suite passed locally and in all six CI combinations: Linux, macOS and Windows, each with Python 3.11 and 3.13. Wheel installation and its Hermes entry point/bundled skill were verified in an isolated Python environment. Installation from the public GitHub repository, with Hermes security scanning enabled, and Plugin Doctor against that installed copy both passed in a disposable Hermes home. The user's active Hermes installation was not changed.
+
 ## Executed locally
 
 - Native Hermes `plugins doctor . --ci`: passes actual discovery, manifest parsing, namespaced import and registration of 14 tools. This caught and corrected a real skill-registration path type mismatch.
