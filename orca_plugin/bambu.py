@@ -38,9 +38,15 @@ class ImplicitFTPS(ftplib.FTP_TLS):
         with self.transfercmd("STOR " + filename) as data:
             while block := source.read(65536):
                 data.sendall(block)
-        # P1S does not answer the TLS close_notify exchange used by ftplib's
-        # storbinary. Close the data socket, then require the FTP completion
-        # response; the caller also verifies the remote size before a receipt.
+            # Send close_notify so TLS peers receive a clean end of data, but
+            # bound the wait: P1S does not send a reciprocal shutdown reply.
+            data.settimeout(2)
+            try:
+                data.unwrap().close()
+            except (TimeoutError, ssl.SSLEOFError):
+                pass
+        # A missing shutdown reply is not upload success. Require the FTP
+        # completion response and, at the caller, matching remote file size.
         return self.voidresp()
 
     def connect(self, host, port=990, timeout=30, source_address=None):
@@ -199,7 +205,7 @@ class BambuLAN:
                 ftp.voidcmd("TYPE I")
                 if ftp.size(filename) != path.stat().st_size:
                     raise OrcaError("Bambu upload size could not be verified. No start receipt created.")
-        except (OSError, ftplib.Error) as exc:
+        except (OSError, ftplib.Error, EOFError) as exc:
             raise OrcaError("Bambu FTPS upload failed; check LAN access, certificate and SD card. No print started by this operation.") from exc
         return filename
 

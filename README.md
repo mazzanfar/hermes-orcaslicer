@@ -14,6 +14,7 @@ A native Hermes plugin for preparing, slicing, reviewing and exporting 3D prints
 - Reuse one editable review copy for full interactive editing and toolpath review in native Orca. GUI launch is optional and requested at most once per job.
 - Slice in the background, report failures and warnings, and read time/material estimates.
 - Produce a per-layer SVG of linear extrusion moves and export the full sliced 3MF for Orca's complete preview.
+- Select the physical plate explicitly and review sliced plate/nozzle/material temperatures and destination mapping before upload. An expected-plate mismatch blocks transfer before network access.
 - Export verified G-code or sliced 3MF for SD/USB/native upload.
 - Upload, explicitly start, monitor, pause/resume/cancel through the implemented protocols below.
 
@@ -90,6 +91,10 @@ Jobs live under `~/.hermes-orca/jobs/<id>/`. Each includes an input copy, resolv
 
 ### Preview and estimates
 
+Pass `bed_type` to `orca_prepare` to select the physical plate instead of accepting a default. After slicing, call `orca_preflight` with `job_id`, `artifact`, optional configured destination `name`, and `expected_bed_type`. The offline report reads the hash-verified G-code (including the selected plate inside a sliced 3MF), shows temperatures and configured AMS/external-spool mapping, and identifies missing metadata or mismatches. Pass the same `expected_bed_type` to `orca_upload`; the upload reruns these checks and saves the report with its receipt. Omitting the expected plate produces a warning, not a claim that the physical plate matches. Existing source projects remain untouched.
+
+Preflight reads slicer metadata; custom firmware macros may alter actual temperatures. It does not inspect the camera or certify a clean/empty bed, loaded material, geometry, adhesion or mechanical strength. Confirm physical readiness separately.
+
 The SVG is a lightweight linear-extrusion review aid. It omits arcs and does not model every firmware command/tool offset; limitations are returned with it. Use `orca_open_native` to create/reuse a review copy; open it in the existing Orca window for full review. Set `launch=true` only when a launch is wanted; repeated calls do not create new copies or launch additional windows. No result certifies adhesion, mechanical strength, dimensional fit or arbitrary G-code safety. Times are the slicer's estimates; unknown macro duration can make them inaccurate.
 
 ## Tools
@@ -108,6 +113,7 @@ The SVG is a lightweight linear-extrusion review aid. It omits arcs and does not
 | `orca_export` | Copy a verified artifact to a new destination |
 | `orca_printer_configure` / `orca_printers` | Configure/list explicit connections |
 | `orca_printer_status` | Read hardware status |
+| `orca_preflight` | Offline review of sliced settings, expected plate and destination mapping |
 | `orca_upload` | Upload without printing |
 | `orca_start` | Submit a reviewed upload once |
 | `orca_printer_control` | Requested pause/resume/cancel |

@@ -11,6 +11,8 @@ from .common import OrcaError, existing_file, read_json
 
 MAX_MEMBER = 32 * 1024 * 1024
 KINDS = {"machine", "process", "filament"}
+BED_TYPES = {"Cool Plate", "Engineering Plate", "High Temp Plate", "Textured PEI Plate",
+             "Textured Cool Plate", "Supertack Plate"}
 SUMMARY_KEYS = (
     "printer_settings_id", "printer_model", "nozzle_diameter", "printable_area", "printable_height",
     "gcode_flavor", "curr_bed_type", "filament_settings_id", "filament_type", "layer_height",

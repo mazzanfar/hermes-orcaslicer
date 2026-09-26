@@ -8,7 +8,7 @@ from .common import OrcaError, home
 from .connections import capabilities
 from .project import edit_project
 from .printers import Printers
-from .profiles import Catalog, inspect_project, roots
+from .profiles import BED_TYPES, Catalog, inspect_project, roots
 from .preview import layer_svg
 from .slicer import Slicer, diagnose, discover
 
@@ -37,6 +37,7 @@ TOOLS = {
                       "filaments": prop("Filament JSON preset paths in order", "array", items={"type": "string"}),
                       "arrange": prop("Let Orca automatically arrange objects before slicing; inspect resulting plate assignment", "boolean", default=False),
                       "orient": prop("Let Orca automatically orient and place objects on the bed before slicing", "boolean", default=False),
+                      "bed_type": prop("Explicit physical build plate type. Overrides the project/global default; review sliced output for plate overrides.", enum=sorted(BED_TYPES)),
                       "plate": prop("Plate index, starting at 1", "integer", minimum=1, default=1)}),
     "orca_slice": ("Start local slicing of a prepared job. Returns immediately; poll orca_job. Never sends anything to a printer.", {"job_id": prop("Prepared job id")}),
     "orca_job": ("Read job status, errors, warnings, time/material metadata and hash-verified output references. Slicing success alone does not establish physical printability.", {"job_id": prop("Job id")}),
@@ -51,8 +52,12 @@ TOOLS = {
                                 "options": prop("Protocol options: Prusa storage/username/password_env; Duet password_env; Flashforge serial/access_code_env/bed_levelling (single-tool external spool); Bambu serial/access_code_env/ca_file/use_ams/ams_mapping and calibration booleans. No secret values.", "object")}),
     "orca_printers": ("List configured printer connections and exact profile bindings. Does not discover or scan the network.", {}),
     "orca_printer_status": ("Read printer readiness/progress without changing hardware state. Use after start/control to verify the actual outcome.", {"name": prop("Configured printer name")}),
+    "orca_preflight": ("Review hash-verified sliced plate/nozzle/material/temperature metadata and optional destination/AMS mapping without contacting a printer. Compare expected_bed_type with the actual plate. Does not certify clean bed, live material or toolpath safety.",
+                       {"job_id": prop("Sliced job id"), "artifact": prop("Exact sliced .gcode or .3mf artifact"),
+                        "name": prop("Optional configured destination"), "expected_bed_type": prop("Physical plate type to compare with sliced output", enum=sorted(BED_TYPES))}),
     "orca_upload": ("Upload a verified G-code or Bambu sliced 3MF to a matching idle printer. Does NOT start printing. User must have requested upload to this destination. Returns a one-hour upload receipt.",
-                    {"name": prop("Configured printer"), "job_id": prop("Sliced job id"), "artifact": prop("Exact compatible artifact name (.3mf for Bambu LAN, .gcode for HTTP printers)")}),
+                    {"name": prop("Configured printer"), "job_id": prop("Sliced job id"), "artifact": prop("Exact compatible artifact name (.3mf for Bambu LAN, .gcode for HTTP printers)"),
+                     "expected_bed_type": prop("Physical plate type; a mismatch blocks upload before network access", enum=sorted(BED_TYPES))}),
     "orca_start": ("Start the reviewed upload once. Set confirmed only when the user explicitly requested this print and confirmed clear bed/correct material. A timeout is UNKNOWN, never automatically retry or re-upload to bypass the one-attempt protection. Check status.",
                    {"receipt_id": prop("Upload receipt id"), "confirmed": prop("Explicit user intent and physical readiness are established", "boolean", default=False)}),
     "orca_printer_control": ("Pause, resume, or cancel a printer job only at the user's explicit request. Poll status afterward. This acts on the printer's current job.",
@@ -64,6 +69,7 @@ REQUIRED = {
     "orca_preview": ["job_id", "artifact"], "orca_export": ["job_id", "artifact", "destination"],
     "orca_printer_configure": ["name", "kind", "printer_profile"], "orca_printer_status": ["name"],
     "orca_upload": ["name", "job_id", "artifact"], "orca_start": ["receipt_id", "confirmed"],
+    "orca_preflight": ["job_id", "artifact"],
     "orca_printer_control": ["name", "action", "confirmed"],
 }
 
@@ -89,6 +95,7 @@ class Service:
                     "orca_job": self.slicer.job, "orca_export": self.slicer.export,
                     "orca_printer_configure": self.printers.configure, "orca_printers": self.printers.list,
                     "orca_printer_status": self.printers.status, "orca_upload": self.printers.upload,
+                    "orca_preflight": self.printers.preflight,
                     "orca_start": self.printers.start, "orca_printer_control": self.printers.control,
                     "orca_preview": self.preview}
         # Export's public name is consistent with upload and preview.

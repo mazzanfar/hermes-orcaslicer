@@ -34,13 +34,14 @@ def run():
     cases = [
         ("Prusa", "Prusa MK4 0.4 nozzle", "0.20mm Standard @MK4", "Prusa Generic PLA @MK4"),
         ("Creality", "Creality Ender-3 V3 0.4 nozzle", "0.20mm Standard @Creality Ender-3 V3", "Creality Generic PLA @Ender-3V3-all"),
+        ("BBL", "Bambu Lab P1S 0.4 nozzle", "0.20mm Standard @BBL X1C", "Generic PLA"),
     ]
     results = []
     for vendor, machine, process, filament in cases:
         def preset(kind, name):
             return str(catalog.items[vendor, kind, name][0])
         job = tools.call("orca_prepare", source=str(model), machine=preset("machine", machine),
-                         process=preset("process", process), filaments=[preset("filament", filament)], arrange=True, orient=True)
+                         process=preset("process", process), filaments=[preset("filament", filament)], arrange=True, orient=True, bed_type="Textured PEI Plate")
         tools.call("orca_slice", job_id=job["id"])
         while True:
             result = tools.call("orca_job", job_id=job["id"])
@@ -49,6 +50,11 @@ def run():
             time.sleep(0.2)
         if result["state"] == "sliced":
             assert result["printer_profile"] == machine
+            for output in result["artifacts"]:
+                review = tools.call("orca_preflight", job_id=job["id"], artifact=output["name"], expected_bed_type="Textured PEI Plate")
+                assert review["checks_passed"], review
+                assert review["bed_type"] == "Textured PEI Plate", review
+                assert review["first_layer_bed_temperature"] is not None, review
             artifact = next(a for a in result["artifacts"] if a["name"].endswith(".gcode"))
             preview = tools.call("orca_preview", job_id=job["id"], artifact=artifact["name"])
             assert preview["segments"] > 0, preview

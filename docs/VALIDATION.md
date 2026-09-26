@@ -1,12 +1,12 @@
 # Validation record
 
-Date: 2026-09-26. Preview release; no physical print was started as part of development.
+Date: 2026-09-26. Preview release. This record focuses on reproducible offline and simulated-protocol checks; it is not hardware certification.
 
 The original 24-test suite passed locally and in all six CI combinations: Linux, macOS and Windows, each with Python 3.11 and 3.13. Wheel installation and its Hermes entry point/bundled skill were verified in an isolated Python environment. Installation from the public GitHub repository, with Hermes security scanning enabled, and Plugin Doctor against that installed copy both passed in a disposable Hermes home. The user's active Hermes installation was not changed.
 
 ## Executed locally
 
-- Native Hermes `plugins doctor . --ci`: passes actual discovery, manifest parsing, namespaced import and registration of 17 tools. This caught and corrected a real skill-registration path type mismatch.
+- Native Hermes `plugins doctor . --ci`: passes actual discovery, manifest parsing, namespaced import and registration of 18 tools. This caught and corrected a real skill-registration path type mismatch.
 - Stock OrcaSlicer 2.4.2 on macOS: executable discovery and required CLI flags verified.
 - Bambu Lab P1S 0.4 nozzle: an existing saved project was copied, edited and sliced through the stock CLI. G-code and sliced 3MF were produced; source remained separate. The user's project is not included in this repository.
 - Prusa MK4 0.4 nozzle: a generated 5 mm cube was sliced from raw STL using resolved stock machine, process and PLA profiles. G-code and sliced 3MF produced; first-layer SVG and verified export exercised.
@@ -17,6 +17,8 @@ The original 24-test suite passed locally and in all six CI combinations: Linux,
 
 ## Important observations
 
+The existing acceptance workflows now exercise explicit plate selection, offline preflight for plain G-code and embedded selected-plate G-code, and rejection of a mismatched expected plate before upload. The suite remains at 14 tests. Stock Orca CLI runs passed with explicit Textured PEI selection for Prusa MK4, Creality Ender-3 V3 and Bambu P1S profiles; both artifact formats report the selected plate and first-layer temperature. These are offline slicing checks, not new physical prints.
+
 The inherited `printer_settings_id` in a stock Creality base was just `Creality`; using it directly falsely rejected a compatible process. The plugin now sets the concrete selected preset's name when flattening machine settings.
 
 macOS slicing of raw meshes aborted under the restricted development sandbox, despite `--help` working. The same offline commands succeeded outside that sandbox. Ordinary terminal use is the supported execution environment; this plugin cannot grant OS permissions.
@@ -26,7 +28,7 @@ The Prusa profile reported a long first-layer/startup estimate for a tiny cube. 
 ## Not yet established
 
 - Physical print quality, fit, strength or hardware behavior on any printer.
-- Live uploads/start/pause/resume/cancel on any hardware. The P1S connection attempt failed with EHOSTUNREACH before authentication; see [hardware record](HARDWARE_VALIDATION.md).
+- Broad hardware/firmware validation of uploads, start and pause/resume/cancel. Protocol simulations alone do not establish this.
 - Real Orca CLI execution on Linux and Windows. Cross-platform unit CI does not establish this.
 - Hardware compatibility of the newly implemented Bambu LAN, PrusaLink, Duet and Flashforge HTTP adapters. Bambu cloud and other unimplemented protocols remain unavailable.
 - All unusual Orca profiles, conditional compatibility expressions, toolchangers and multi-material layouts.

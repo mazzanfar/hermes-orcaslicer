@@ -197,7 +197,34 @@ class Printers:
             return {"state": "manual_handoff", "capabilities": ["export"], "print_started": False}
         return self.adapter(config).status()
 
-    def upload(self, name, job_id, artifact):
+    def preflight(self, job_id, artifact, name=None, expected_bed_type=None):
+        from .preflight import review
+        path, job = self.slicer.artifact(job_id, artifact)
+        result = review(path, job, expected_bed_type)
+        if name is not None:
+            config = self.config(name)
+            options = config.get("options", {})
+            result["destination"] = {"name": name, "kind": config["kind"], "printer_profile": config["printer_profile"]}
+            if job["printer_profile"] != config["printer_profile"]:
+                result["errors"].append("Job printer/nozzle preset does not match the configured destination.")
+            if config["kind"] != "file":
+                extension = ".3mf" if config["kind"] == "bambu_lan" else ".gcode"
+                if path.suffix.lower() != extension:
+                    result["errors"].append(f"This connection requires a verified {extension} artifact.")
+            else:
+                result["warnings"].append("This destination requires manual file handoff; network upload/start is unavailable.")
+            if config["kind"] == "bambu_lan":
+                result["material_source"] = "AMS" if options.get("use_ams") else "external_spool"
+                result["ams_mapping"] = options.get("ams_mapping", [])
+                result["warnings"].append("AMS mapping uses zero-based tray indices and is configured intent, not a live check of loaded material.")
+        result["checks_passed"] = not result["errors"]
+        result["printer_contacted"] = False
+        return result
+
+    def upload(self, name, job_id, artifact, expected_bed_type=None):
+        preflight = self.preflight(job_id, artifact, name, expected_bed_type)
+        if preflight["errors"]:
+            raise OrcaError(" ".join(preflight["errors"]))
         config = self.config(name)
         path, job = self.slicer.artifact(job_id, artifact)
         extension = ".3mf" if config["kind"] == "bambu_lan" else ".gcode"
@@ -216,9 +243,9 @@ class Printers:
         receipt_id = uuid.uuid4().hex
         receipt = {"id": receipt_id, "printer": name, "config": config, "job_id": job_id,
                    "artifact": artifact, "sha256": sha256(path), "remote": remote,
-                   "uploaded_at": time.time(), "state": "uploaded", "details": details}
+                   "uploaded_at": time.time(), "state": "uploaded", "details": details, "preflight": preflight}
         write_json(self.base / "receipts" / f"{receipt_id}.json", receipt)
-        return {"receipt_id": receipt_id, "remote": remote, "print_started": False,
+        return {"receipt_id": receipt_id, "remote": remote, "print_started": False, "preflight": preflight,
                 "next": "Review job and destination, confirm clear bed/material, then explicitly request start."}
 
     def start(self, receipt_id, confirmed=False):
