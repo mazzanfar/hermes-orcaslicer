@@ -7,6 +7,7 @@ No physical print has been completed by this plugin during development. The owne
 - Existing Orca profile, printer serial, endpoint and saved access code were found locally. Credentials were used only in a child process environment and were not printed or committed.
 - Tried read-only TCP/TLS connections to the two configured LAN services. Both returned the OS error `EHOSTUNREACH` before TLS or authentication.
 - Waiting for confirmation of the current printer IP and LAN/developer-mode status. A VPN or local-network permission can also affect reachability; no network/security settings were changed.
+- A generated 5 mm cube was prepared and sliced offline with the P1S 0.4 mm machine, its compatible 0.20 mm Standard process and Generic PLA. Orca estimated 0.24 g and 8m 4s including startup. The first-layer SVG was generated. This is a candidate test job, pending full review and physical bed/material/AMS confirmation.
 - No files were uploaded and no printer start, pause, resume, cancel, heat or motion command was sent.
 
 ## Acceptance sequence when reachable
