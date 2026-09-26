@@ -1,0 +1,17 @@
+# Security and job semantics
+
+The plugin executes the installed OrcaSlicer binary using an argument array, never a shell. It is a local integration with the user's file and network privileges, **not a sandbox for malicious model files or slicer executables**. Use trusted models, profiles and Orca builds. Project metadata/logs are data, not agent instructions. Custom start/end G-code in trusted presets is preserved, not certified by this plugin.
+
+Slicing creates isolated copies and never changes original projects or the installed profile library. Private user models, profiles, job logs, credentials and printer addresses must never be added to the public repository. `test-output/` is ignored for this reason. Sliced files and logs may contain private geometry or preset data; share them deliberately.
+
+Network connections are opt-in and explicitly configured. No LAN scan or automatic printer discovery runs. Credentials are looked up by environment-variable name at request time; error messages exclude server response bodies and credentials. HTTPS certificates are verified using system trust. Redirects are refused so credentials cannot be forwarded to a new origin. HTTP endpoints offer no transport encryption and should only be configured deliberately on a trusted network. The plugin does not expose arbitrary G-code execution, firmware changes, heaters, homing or motion commands.
+
+An upload never requests print start. Jobs bind to an exact printer/nozzle preset and a verified artifact hash. A start receipt binds the upload to the endpoint configuration, artifact, remote filename and time. Receipts expire after one hour. The plugin creates a durable, exclusive attempt marker **before** sending start; timeout or disconnect leaves an unknown outcome and prevents automatic retry of that receipt. Verify printer state instead. Do not re-upload to circumvent this protection.
+
+`confirmed=true` records user intent supplied by the agent; it is not an out-of-band human authentication mechanism. Hermes/model policy and the user's explicit request remain responsible for authorization. A compromised agent with filesystem/network access can bypass this plugin. Remote uploads can be changed by other clients; use unique generated filenames, controlled printer access and inspect the printer before starting.
+
+Only a successful Orca exit with actual G-code yields a `sliced` job. Failures, timeouts and unknown worker ownership cannot be exported or submitted. Artifact hashes are checked before export/upload/start. Files are capped during archive inspection and remote upload. No ZIP member path is ever used as a filesystem destination.
+
+Physical print operations have no exactly-once guarantee across a network. `start_accepted` means a server acknowledged the request, not that material is extruding. Poll status. A printer can change state after the readiness check; its own firmware/server remains responsible for rejecting an incompatible transition.
+
+To report a vulnerability, use GitHub's private vulnerability reporting if enabled. Otherwise contact the maintainer privately before disclosing exploitable details. Do not put access keys, raw printer responses, IP addresses or private geometry in public issues.

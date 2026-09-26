@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68,<83"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hermes-orcaslicer"
+version = "0.1.0"
+description = "Printer-independent OrcaSlicer workflows for Hermes Agent"
+requires-python = ">=3.11"
+license = "MIT"
+authors = [{name = "mazzanfar"}]
+dependencies = []
+readme = "README.md"
+
+[project.urls]
+Homepage = "https://github.com/mazzanfar/hermes-orcaslicer"
+
+[project.scripts]
+hermes-orca = "orca_plugin.cli:main"
+
+[project.entry-points."hermes_agent.plugins"]
+orcaslicer = "orca_plugin:register"
+
+[tool.setuptools.packages.find]
+include = ["orca_plugin*"]
+
+[tool.setuptools.package-data]
+orca_plugin = ["SKILL.md"]
