@@ -1,5 +1,10 @@
 # OrcaSlicer for Hermes Agent
 
+[![Tests](https://github.com/mazzanfar/hermes-orcaslicer/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/mazzanfar/hermes-orcaslicer/actions/workflows/test.yml)
+[![Security](https://github.com/mazzanfar/hermes-orcaslicer/actions/workflows/security.yml/badge.svg?branch=main)](https://github.com/mazzanfar/hermes-orcaslicer/actions/workflows/security.yml)
+[![Release](https://img.shields.io/github/v/release/mazzanfar/hermes-orcaslicer)](https://github.com/mazzanfar/hermes-orcaslicer/releases/latest)
+[![License: MIT](https://img.shields.io/github/license/mazzanfar/hermes-orcaslicer)](LICENSE)
+
 A native Hermes plugin for preparing, slicing, reviewing and exporting 3D prints with **stock OrcaSlicer**. It uses OrcaSlicer's own installed printer, process and filament profiles—including custom presets—instead of maintaining a separate list of printer models.
 
 **Release: 0.3.0.** Real slicing has been exercised on Windows, macOS and Linux with OrcaSlicer 2.4.2 and Bambu P1S, Prusa MK4 and Creality Ender-3 V3 profiles. These are slicing tests, not physical print certifications. Bambu LAN, PrusaLink, Duet and modern Flashforge HTTP adapters now join OctoPrint and Moonraker. Network adapters have protocol simulation tests; those tests do not certify particular hardware or firmware. See [validation](docs/VALIDATION.md).
