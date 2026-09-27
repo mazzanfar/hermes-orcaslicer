@@ -7,7 +7,7 @@
 
 A native Hermes plugin for preparing, slicing, reviewing and exporting 3D prints with **stock OrcaSlicer**. It uses OrcaSlicer's own installed printer, process and filament profiles—including custom presets—instead of maintaining a separate list of printer models.
 
-**Release: 0.3.0.** Real slicing has been exercised on Windows, macOS and Linux with OrcaSlicer 2.4.2 and Bambu P1S, Prusa MK4 and Creality Ender-3 V3 profiles. These are slicing tests, not physical print certifications. Bambu LAN, PrusaLink, Duet and modern Flashforge HTTP adapters now join OctoPrint and Moonraker. Network adapters have protocol simulation tests; those tests do not certify particular hardware or firmware. See [validation](docs/VALIDATION.md).
+**Release: 0.4.0.** Real slicing has been exercised on Windows, macOS and Linux with OrcaSlicer 2.4.2 and Bambu P1S, Prusa MK4 and Creality Ender-3 V3 profiles. These are slicing tests, not physical print certifications. Bambu LAN, PrusaLink, Duet and modern Flashforge HTTP adapters now join OctoPrint and Moonraker. Network adapters have protocol simulation tests; those tests do not certify particular hardware or firmware. See [validation](docs/VALIDATION.md).
 
 ## What works
 
@@ -52,6 +52,8 @@ Install [OrcaSlicer](https://github.com/OrcaSlicer/OrcaSlicer/releases) and sele
 hermes plugins install mazzanfar/hermes-orcaslicer
 hermes plugins enable orcaslicer
 ```
+
+The [GitHub release](https://github.com/mazzanfar/hermes-orcaslicer/releases/latest) also provides a wheel, source archive and SHA-256 checksums for Python package users. Hermes uses the repository installation above.
 
 This is a **repository installation**, not an official catalog entry. Follow Hermes' plugin installation review. Restart your Hermes session after enabling it. Load `orcaslicer:workflow` with Hermes’ skill tool before a printing workflow.
 

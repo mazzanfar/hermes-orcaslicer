@@ -1,8 +1,8 @@
 # Validation record
 
-Updated: 2026-09-27. Release 0.3.0. This record focuses on reproducible offline and simulated-protocol checks; it is not hardware certification.
+Updated: 2026-09-27. Release 0.4.0. This record focuses on reproducible offline and simulated-protocol checks; it is not hardware certification.
 
-The current acceptance suite has 14 tests and uses registered plugin handlers. It passes locally and all six Linux/macOS/Windows × Python 3.11/3.13 CI combinations passed for the 0.2.0 candidate ([run 36279726356](https://github.com/mazzanfar/hermes-orcaslicer/actions/runs/36279726356)). CI runs Python and simulated printer protocols, not the Orca application. Release checks additionally use actual Hermes and stock OrcaSlicer as described below.
+The current acceptance suite has 14 tests and uses registered plugin handlers. It passes locally and all six Linux/macOS/Windows × Python 3.11/3.13 CI combinations passed for the 0.2.0 candidate ([run 36279726356](https://github.com/mazzanfar/hermes-orcaslicer/actions/runs/36279726356)). Those historical jobs ran Python and simulated printer protocols; current CI also runs the actual Orca application. Release checks additionally use actual Hermes and stock OrcaSlicer as described below.
 
 ## Executed locally
 
