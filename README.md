@@ -1,3 +1,5 @@
+![Hermes–OrcaSlicer: Hermes beside an orca being 3D printed, rendered in dark ASCII characters on white.](docs/assets/hermes-orcaslicer-banner.png)
+
 # OrcaSlicer for Hermes Agent
 
 [![Tests](https://github.com/mazzanfar/hermes-orcaslicer/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/mazzanfar/hermes-orcaslicer/actions/workflows/test.yml)
