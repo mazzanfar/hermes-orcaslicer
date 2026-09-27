@@ -2,7 +2,21 @@
 import re
 import urllib.parse
 from pathlib import Path
-from .common import OrcaError
+from .common import OrcaError, credential_env_name
+
+PRINTER_CREDENTIAL_OPTIONS = {"password_env", "access_code_env"}
+
+
+def require_encrypted_credentials(url, options, api_key_env=None):
+    """Refuse to send credentials over plaintext http unless the user opted in explicitly."""
+    if options.get("allow_plaintext_credentials"):
+        return
+    hint = "Use an https:// URL, or set options.allow_plaintext_credentials=true to accept plaintext on a trusted network."
+    printer = sorted((PRINTER_CREDENTIAL_OPTIONS & set(options)) | ({"api_key_env"} if api_key_env else set()))
+    if printer and urllib.parse.urlsplit(url).scheme != "https":
+        raise OrcaError(f"{', '.join(printer)} would be sent to a plaintext http printer URL. {hint}")
+    if options.get("camera_api_key_env") and urllib.parse.urlsplit(options["camera_url"]).scheme != "https":
+        raise OrcaError(f"camera_api_key_env would be sent to a plaintext http camera_url. {hint}")
 
 
 def validate_options(kind, options):
@@ -13,7 +27,7 @@ def validate_options(kind, options):
         "flashforge_http": {"serial", "access_code_env", "bed_levelling"},
         "bambu_lan": {"serial", "access_code_env", "ca_file", "mqtt_port", "ftps_port", "use_ams", "ams_mapping", "bed_levelling", "flow_cali", "vibration_cali", "timelapse"},
     }
-    camera_options = {"camera_url", "camera_api_key_env"}
+    camera_options = {"camera_url", "camera_api_key_env", "allow_plaintext_credentials"}
     if kind == "bambu_lan":
         camera_options |= {"camera_protocol", "camera_port"}
     if not isinstance(options, dict) or set(options) - (allowed[kind] | camera_options):
@@ -29,11 +43,11 @@ def validate_options(kind, options):
     elif options.get("camera_api_key_env"):
         raise OrcaError("camera_api_key_env requires camera_url.")
     for key, value in options.items():
-        if key.endswith("_env") and (not isinstance(value, str) or not re.fullmatch(r"[A-Z_][A-Z0-9_]*", value)):
-            raise OrcaError("Credentials must be supplied by environment variable NAME.")
+        if key.endswith("_env"):
+            credential_env_name(value, key)
         if key.endswith("_port") and (type(value) is not int or not 1 <= value <= 65535):
             raise OrcaError("Port must be an integer from 1 to 65535.")
-        if key in {"use_ams", "bed_levelling", "flow_cali", "vibration_cali", "timelapse"} and type(value) is not bool:
+        if key in {"use_ams", "bed_levelling", "flow_cali", "vibration_cali", "timelapse", "allow_plaintext_credentials"} and type(value) is not bool:
             raise OrcaError(f"{key} must be a boolean.")
     if kind == "prusalink":
         if options.get("storage", "usb") not in {"usb", "local", "sdcard"}:

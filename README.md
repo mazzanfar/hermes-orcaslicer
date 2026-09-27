@@ -62,7 +62,7 @@ For a raw model:
 
 For a network printer:
 
-> Configure my Moonraker printer at http://printer.local:7125 using my exact Orca printer preset. Its API key is already in the MOONRAKER_API_KEY environment variable. Check its status.
+> Configure my Moonraker printer at https://printer.local:7125 using my exact Orca printer preset. Its API key is already in the ORCA_MOONRAKER_API_KEY environment variable. Check its status.
 
 Then ask to upload a reviewed job and start it when the bed and material are ready. Upload and start are separate actions. Existing explicit authorization can be reused; the agent should not ask for redundant confirmation.
 
@@ -75,11 +75,13 @@ The plugin discovers normal macOS/Windows/Linux installations. Override paths wh
 | `ORCA_SLICER_PATH` | Full executable path; on macOS use `.../OrcaSlicer.app/Contents/MacOS/OrcaSlicer` |
 | `ORCA_PROFILES_DIR` | Extra preset roots separated by the OS path separator (`:` on macOS/Linux, `;` on Windows) |
 | `HERMES_ORCA_HOME` | Plugin state directory; defaults to `~/.hermes-orca` |
-| Your chosen API-key variable | Secret used by a configured printer; its value is never an agent tool argument |
+| `ORCA_<PRINTER>_KEY` (your chosen name) | Secret used by a configured printer; its value is never an agent tool argument. Credential variable names must start with `ORCA_` or `HERMES_ORCA_` (for example `ORCA_OCTOPRINT_KEY`) so the agent cannot point the plugin at an unrelated provider secret |
 
 Set these in the environment inherited by Hermes. Desktop applications may not inherit terminal environment settings. Linux AppImages or custom launcher scripts may need an explicit `ORCA_PROFILES_DIR` pointing to their resource profiles; a minimal Linux host also needs Orca’s system libraries. `orca_diagnose` reports whether the executable can run and which profile roots were found.
 
 Jobs live under `~/.hermes-orca/jobs/<id>/`. Each includes an input copy, resolved presets when supplied, a manifest, the exact command, a local slicing log and output artifacts. Printer records contain a URL and a secret **variable name**, not the secret. Nothing contacts a printer until a network tool is called. Registering the plugin performs no network or subprocess work.
+
+When a printer uses any credential option (`api_key_env`, `options.password_env`, `options.access_code_env`, `options.camera_api_key_env`), its `url` (and `camera_url` for a camera key) must be `https://`. Many LAN printers only offer plaintext `http://`; if you accept that the secret crosses your trusted network unencrypted, set `options.allow_plaintext_credentials: true` explicitly when configuring the printer. URLs without credentials are not affected.
 
 ### Projects and presets
 
@@ -99,7 +101,7 @@ Preflight reads slicer metadata; custom firmware macros may alter actual tempera
 
 ### Camera and monitoring
 
-Configure `options.camera_url` for a direct HTTP(S) JPEG/PNG snapshot endpoint. Camera credentials are separate: `camera_api_key_env` names an optional X-Api-Key secret, and printer credentials are never forwarded to the camera. URLs must not embed credentials. Redirects are rejected. For a Bambu P1/A1, select `camera_protocol: "bambu_jpeg"` instead; it uses the configured printer CA, serial and access-code environment variable, with verified TLS on port 6000 (`camera_port` can override it). RTSP/RTSPS, cloud relay and continuous streaming are not implemented.
+Configure `options.camera_url` for a direct HTTP(S) JPEG/PNG snapshot endpoint. Camera credentials are separate: `camera_api_key_env` names an optional X-Api-Key secret (an `ORCA_*` variable, sent only to an `https://` camera_url unless `allow_plaintext_credentials` is set), and printer credentials are never forwarded to the camera. URLs must not embed credentials. Redirects are rejected. For a Bambu P1/A1, select `camera_protocol: "bambu_jpeg"` instead; it uses the configured printer CA, serial and access-code environment variable, with verified TLS on port 6000 (`camera_port` can override it). RTSP/RTSPS, cloud relay and continuous streaming are not implemented.
 
 `orca_camera_snapshot(name=...)` saves one bounded image under the local state directory and returns its path for inspection. Images are private by default and are not published. A new request does not prove the camera image itself is current. Cropped, dark or obstructed images cannot establish that the bed is clear, and cameras cannot reliably certify grease-free surfaces.
 

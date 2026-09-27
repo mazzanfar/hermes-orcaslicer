@@ -133,7 +133,7 @@ class ConnectionWorkflows(Base):
         super().setUp()
         _, self.gcode = self.sliced()
         self.tools = Tools(self.base)
-        env = patch.dict(os.environ, {"ORCA_TEST_KEY": "test-only-key", "CAMERA_TEST_KEY": "camera-only-key"})
+        env = patch.dict(os.environ, {"ORCA_TEST_KEY": "test-only-key", "ORCA_CAMERA_TEST_KEY": "camera-only-key"})
         env.start()
         self.addCleanup(env.stop)
         self.server = ThreadingHTTPServer(("127.0.0.1", 0), PrinterServer)
@@ -150,10 +150,14 @@ class ConnectionWorkflows(Base):
 
     def configure(self, kind):
         self.server.kind = kind
+        # The simulator speaks plaintext http, so the test opts in to sending credentials over it.
+        options = {"allow_plaintext_credentials": True}
+        if kind == "flashforge_http":
+            options |= {"serial": "TESTSERIAL", "access_code_env": "ORCA_TEST_KEY"}
+        elif kind == "moonraker":
+            options |= {"camera_url": self.server.url + "/snapshot", "camera_api_key_env": "ORCA_CAMERA_TEST_KEY"}
         self.tools.call("orca_printer_configure", name=kind, kind=kind, printer_profile="Example 0.4 nozzle",
-                        url=self.server.url, api_key_env="ORCA_TEST_KEY",
-                        options={"serial": "TESTSERIAL", "access_code_env": "ORCA_TEST_KEY"} if kind == "flashforge_http" else
-                        {"camera_url": self.server.url + "/snapshot", "camera_api_key_env": "CAMERA_TEST_KEY"} if kind == "moonraker" else {})
+                        url=self.server.url, api_key_env="ORCA_TEST_KEY", options=options)
 
     def upload(self, kind):
         return self.tools.call("orca_upload", name=kind, job_id="job1", artifact="plate.gcode")

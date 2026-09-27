@@ -8,7 +8,6 @@ from __future__ import annotations
 import json
 import http.client
 import os
-import re
 import ssl
 import time
 import urllib.error
@@ -17,7 +16,7 @@ import urllib.request
 import uuid
 from pathlib import Path
 
-from .common import OrcaError, identifier, read_json, sha256, write_json
+from .common import OrcaError, credential_env_name, identifier, read_json, sha256, write_json
 from .monitoring import number, percent, phase
 
 
@@ -172,11 +171,11 @@ class Printers:
             config["url"] = url
             HTTP(config)  # Validation only; no network I/O.
             if api_key_env:
-                if not re.fullmatch(r"[A-Z_][A-Z0-9_]*", api_key_env):
-                    raise OrcaError("Supply the environment variable NAME, not an API key.")
-                config["api_key_env"] = api_key_env
-        from .connections import validate_options
+                config["api_key_env"] = credential_env_name(api_key_env)
+        from .connections import require_encrypted_credentials, validate_options
         config["options"] = validate_options(kind, options or {})
+        if kind != "file":
+            require_encrypted_credentials(url, config["options"], api_key_env)
         if kind == "bambu_lan":
             endpoint = urllib.parse.urlsplit(url)
             if endpoint.scheme != "https" or endpoint.path not in ("", "/") or endpoint.port:

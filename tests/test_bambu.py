@@ -184,16 +184,16 @@ class BambuWorkflow(Base):
             archive.writestr("Metadata/plate_1.gcode", GCODE)
         write_json(directory / "job.json", {"id": "job1", "state": "sliced", "plate": 1, "printer_profile": "Bambu Lab P1S 0.4 nozzle",
                     "artifacts": [{"name": model.name, "path": str(model), "sha256": sha256(model)}]})
-        with patch.dict(os.environ, {"BAMBU_TEST_CODE": "test-access-code"}), patch("orca_plugin.bambu.COMMAND_TIMEOUT", 0.5):
+        with patch.dict(os.environ, {"ORCA_BAMBU_TEST_CODE": "test-access-code"}), patch("orca_plugin.bambu.COMMAND_TIMEOUT", 0.5):
             tools = Tools(self.base)
             tools.call("orca_printer_configure", name="p1s", kind="bambu_lan", url="https://127.0.0.1", printer_profile="Bambu Lab P1S 0.4 nozzle",
-                       options={"serial": "TESTSERIAL", "access_code_env": "BAMBU_TEST_CODE", "ca_file": str(cert), "mqtt_port": ports[0], "ftps_port": ports[1], "camera_protocol": "bambu_jpeg", "camera_port": ports[2]})
+                       options={"serial": "TESTSERIAL", "access_code_env": "ORCA_BAMBU_TEST_CODE", "ca_file": str(cert), "mqtt_port": ports[0], "ftps_port": ports[1], "camera_protocol": "bambu_jpeg", "camera_port": ports[2]})
             self.assertTrue(tools.call("orca_printer_status", name="p1s")["ready_to_start"])
             snapshot = tools.call("orca_camera_snapshot", name="p1s")
             self.assertEqual(Path(snapshot["path"]).read_bytes(), (Path(__file__).parent / "fixtures/camera.jpg").read_bytes())
             self.assertFalse(snapshot["physical_readiness_verified"])
             tools.call("orca_printer_configure", name="wrong-camera-identity", kind="bambu_lan", url="https://127.0.0.1", printer_profile="Bambu Lab P1S 0.4 nozzle",
-                       options={"serial": "WRONGSERIAL", "access_code_env": "BAMBU_TEST_CODE", "ca_file": str(cert), "camera_protocol": "bambu_jpeg", "camera_port": ports[2]})
+                       options={"serial": "WRONGSERIAL", "access_code_env": "ORCA_BAMBU_TEST_CODE", "ca_file": str(cert), "camera_protocol": "bambu_jpeg", "camera_port": ports[2]})
             self.assertIn("verification remains enabled", tools.reject("orca_camera_snapshot", name="wrong-camera-identity"))
             self.camera_failure = True
             self.assertIn("size limit", tools.reject("orca_camera_snapshot", name="p1s"))
@@ -251,7 +251,7 @@ class BambuWorkflow(Base):
             self.assertEqual(observed["job_match"], "different_job")
             self.assertEqual(observed["job_outcome"], "unknown")
             tools.call("orca_printer_configure", name="ams", kind="bambu_lan", url="https://127.0.0.1", printer_profile="Bambu Lab P1S 0.4 nozzle",
-                       options={"serial": "TESTSERIAL", "access_code_env": "BAMBU_TEST_CODE", "ca_file": str(cert), "use_ams": True, "ams_mapping": [0]})
+                       options={"serial": "TESTSERIAL", "access_code_env": "ORCA_BAMBU_TEST_CODE", "ca_file": str(cert), "use_ams": True, "ams_mapping": [0]})
             review = tools.call("orca_preflight", name="ams", job_id="job1", artifact=model.name, expected_bed_type="Textured PEI Plate")
             self.assertEqual(review["material_source"], "AMS")
             self.assertEqual(review["ams_mapping"], [0])

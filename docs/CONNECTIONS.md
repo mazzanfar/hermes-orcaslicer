@@ -6,6 +6,8 @@ Camera snapshots are available through an explicitly configured HTTP(S) endpoint
 
 All connections bind to an exact `printer_profile`. `orca_upload` returns a receipt without printing; `orca_start` consumes a reviewed receipt once. `orca_printer_control` accepts pause/resume/cancel. Always observe status after a command: acceptance is not proof of motion or completion.
 
+Every `*_env` option names an environment variable that must start with `ORCA_` or `HERMES_ORCA_` (for example `ORCA_OCTOPRINT_KEY`). When a connection carries a credential, its URL must be `https://` unless `options.allow_plaintext_credentials: true` is set deliberately; see [SECURITY.md](../SECURITY.md).
+
 ## Bambu LAN
 
 Requires firmware that allows local MQTT/FTPS, usually LAN-only mode and, on authorization-controlled firmware, Developer Mode. Cloud submission is not implemented. Enabling these modes is a user decision; the plugin never changes printer security settings.
@@ -41,7 +43,7 @@ Uploads use `rr_upload`; start/pause/resume/cancel send only the fixed firmware 
 
 ## Flashforge modern HTTP
 
-Use `kind=flashforge_http`, the printer endpoint (normally `http://PRINTER_IP:8898`), `options.serial`, and `options.access_code_env`. This adapter covers the modern `/detail`, `/uploadGcode`, `/printGcode`, and `/control` protocol. `bed_levelling` defaults true at start.
+Use `kind=flashforge_http`, the printer endpoint (normally `http://PRINTER_IP:8898`, so `options.allow_plaintext_credentials: true` is required for the access code), `options.serial`, and `options.access_code_env`. This adapter covers the modern `/detail`, `/uploadGcode`, `/printGcode`, and `/control` protocol. `bed_levelling` defaults true at start.
 
 Currently supports single-tool external-spool jobs. Material-station mappings, multi-tool jobs, Creator-specific command variations, and legacy TCP/serial protocol are not implemented; use native Orca for those. Upload explicitly sets `printNow=false`. Only the documented `ready` state is considered ready; finish/cancel dialogs must be resolved at the printer. Firmware may acknowledge an unsupported control command without acting, so verify status afterward.
 
