@@ -133,7 +133,7 @@ class ConnectionWorkflows(Base):
         super().setUp()
         _, self.gcode = self.sliced()
         self.tools = Tools(self.base)
-        env = patch.dict(os.environ, {"ORCA_TEST_KEY": "test-only-key", "CAMERA_TEST_KEY": "camera-only-key"})
+        env = patch.dict(os.environ, {"ORCA_TEST_KEY": "test-only-key", "ORCA_CAMERA_TEST_KEY": "camera-only-key"})
         env.start()
         self.addCleanup(env.stop)
         self.server = ThreadingHTTPServer(("127.0.0.1", 0), PrinterServer)
@@ -152,8 +152,8 @@ class ConnectionWorkflows(Base):
         self.server.kind = kind
         self.tools.call("orca_printer_configure", name=kind, kind=kind, printer_profile="Example 0.4 nozzle",
                         url=self.server.url, api_key_env="ORCA_TEST_KEY",
-                        options={"serial": "TESTSERIAL", "access_code_env": "ORCA_TEST_KEY"} if kind == "flashforge_http" else
-                        {"camera_url": self.server.url + "/snapshot", "camera_api_key_env": "CAMERA_TEST_KEY"} if kind == "moonraker" else {})
+                        options={"allow_insecure_http": True, **({"serial": "TESTSERIAL", "access_code_env": "ORCA_TEST_KEY"} if kind == "flashforge_http" else
+                        {"camera_url": self.server.url + "/snapshot", "camera_api_key_env": "ORCA_CAMERA_TEST_KEY"} if kind == "moonraker" else {})})
 
     def upload(self, kind):
         return self.tools.call("orca_upload", name=kind, job_id="job1", artifact="plate.gcode")
@@ -214,6 +214,45 @@ class ConnectionWorkflows(Base):
                 self.assertEqual(self.server.starts, 1)
 
     def test_connection_and_receipt_guards(self):
+        # Tool arguments and pre-existing configs must reject unrelated secrets before I/O.
+        from orca_plugin.common import write_json
+        before = len(self.server.calls)
+        for field in ("api_key_env", "password_env", "access_code_env", "camera_api_key_env"):
+            for forbidden in ("OPENROUTER_API_KEY", "ANTHROPIC_API_KEY", "ORCA_", "HERMES_ORCA_", "ORCA_KEY\n"):
+                with self.subTest(field=field, forbidden=forbidden), patch.dict(os.environ, {forbidden: "never-forward-this"}):
+                    options = {"allow_insecure_http": True}
+                    kind = {"password_env": "duet", "access_code_env": "flashforge_http"}.get(field, "moonraker")
+                    args = dict(name="blocked", kind=kind, printer_profile="Example 0.4 nozzle", url=self.server.url, options=options)
+                    if field == "api_key_env":
+                        args[field] = forbidden
+                    else:
+                        options[field] = forbidden
+                    if field == "camera_api_key_env": options["camera_url"] = self.server.url + "/snapshot"
+                    if kind == "flashforge_http": options["serial"] = "TESTSERIAL"
+                    self.assertIn("namespace", self.tools.reject("orca_printer_configure", **args))
+                    self.assertFalse((self.base / "printers/blocked.json").exists())
+                    write_json(self.base / "printers/legacy.json", {**args, "name": "legacy"})
+                    for tool in ("orca_printer_status", "orca_camera_snapshot"):
+                        self.assertIn("namespace", self.tools.reject(tool, name="legacy"))
+        for opt_in in (None, False, "true", 1):
+            options = {} if opt_in is None else {"allow_insecure_http": opt_in}
+            args = dict(name="plaintext", kind="moonraker", printer_profile="Example 0.4 nozzle", url=self.server.url, api_key_env="ORCA_TEST_KEY", options=options)
+            self.tools.reject("orca_printer_configure", **args)
+            write_json(self.base / "printers/legacy.json", {**args, "name": "legacy"})
+            self.tools.reject("orca_printer_status", name="legacy")
+        self.tools.reject("orca_printer_configure", name="camera-http", kind="moonraker", printer_profile="Example 0.4 nozzle", url="https://printer.invalid",
+                          options={"camera_url": self.server.url + "/snapshot", "camera_api_key_env": "HERMES_ORCA_CAMERA_KEY"})
+        for kind, options in (("duet", {}), ("prusalink", {"username": "maker", "password_env": "ORCA_PRINTER_PASSWORD"}),
+                              ("flashforge_http", {"serial": "TESTSERIAL", "access_code_env": "ORCA_PRINTER_CODE"})):
+            args = dict(name="plain-other", kind=kind, printer_profile="Example 0.4 nozzle", url=self.server.url, options=options)
+            self.assertIn("HTTPS", self.tools.reject("orca_printer_configure", **args))
+            write_json(self.base / "printers/legacy.json", {**args, "name": "legacy"})
+            self.assertIn("HTTPS", self.tools.reject("orca_printer_status", name="legacy"))
+        write_json(self.base / "printers/legacy.json", dict(name="legacy", kind="moonraker", url="https://printer.invalid",
+                   options={"camera_url": self.server.url + "/snapshot", "camera_api_key_env": "ORCA_CAMERA_TEST_KEY"}))
+        self.assertIn("HTTPS", self.tools.reject("orca_camera_snapshot", name="legacy"))
+        self.tools.call("orca_printer_configure", name="tls", kind="moonraker", printer_profile="Example 0.4 nozzle", url="https://printer.invalid", api_key_env="HERMES_ORCA_PRINTER_KEY")
+        self.assertEqual(len(self.server.calls), before)
         self.configure("moonraker")
         self.server.failure = "camera_redirect"
         self.assertIn("redirected", self.tools.reject("orca_camera_snapshot", name="moonraker"))

@@ -56,6 +56,8 @@ def http_frame(options):
     # Camera credentials are separate; never forward printer credentials.
     from .http_printers import secret
     from .printers import NoRedirect
+    from .connections import validate_credentials
+    validate_credentials({"options": options})
     request = urllib.request.Request(options["camera_url"], headers={"Accept": "image/jpeg, image/png", "Cache-Control": "no-cache"})
     if options.get("camera_api_key_env"):
         request.add_header("X-Api-Key", secret(options, "camera_api_key_env"))

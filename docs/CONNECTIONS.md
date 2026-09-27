@@ -6,6 +6,12 @@ Camera snapshots are available through an explicitly configured HTTP(S) endpoint
 
 All connections bind to an exact `printer_profile`. `orca_upload` returns a receipt without printing; `orca_start` consumes a reviewed receipt once. `orca_printer_control` accepts pause/resume/cancel. Always observe status after a command: acceptance is not proof of motion or completion.
 
+## Credentials and migration
+
+Every `*_env` name must match `^(ORCA|HERMES_ORCA)_[A-Z0-9_]+$`, such as `ORCA_PRINTER_KEY`. Use dedicated printer/camera secrets, never provider credentials. HTTPS is required when credentials are sent. For an HTTP-only device, explicitly set `options.allow_insecure_http=true` after the user approves plaintext on a trusted network; this also covers its configured HTTP camera. Duet's default password counts as a credential. TLS verification cannot be disabled.
+
+Older saved connections are rechecked before use. Define dedicated names and configure a new connection if rejected; prepare new upload receipts for it. Do not silently migrate secrets or reuse old receipts.
+
 ## Bambu LAN
 
 Requires firmware that allows local MQTT/FTPS, usually LAN-only mode and, on authorization-controlled firmware, Developer Mode. Cloud submission is not implemented. Enabling these modes is a user decision; the plugin never changes printer security settings.

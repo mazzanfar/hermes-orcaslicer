@@ -7,7 +7,7 @@
 
 A native Hermes plugin for preparing, slicing, reviewing and exporting 3D prints with **stock OrcaSlicer**. It uses OrcaSlicer's own installed printer, process and filament profiles—including custom presets—instead of maintaining a separate list of printer models.
 
-**Release: 0.4.0.** Real slicing has been exercised on Windows, macOS and Linux with OrcaSlicer 2.4.2 and Bambu P1S, Prusa MK4 and Creality Ender-3 V3 profiles. These are slicing tests, not physical print certifications. Bambu LAN, PrusaLink, Duet and modern Flashforge HTTP adapters now join OctoPrint and Moonraker. Network adapters have protocol simulation tests; those tests do not certify particular hardware or firmware. See [validation](docs/VALIDATION.md).
+**Release: 0.5.0.** Real slicing has been exercised on Windows, macOS and Linux with OrcaSlicer 2.4.2 and Bambu P1S, Prusa MK4 and Creality Ender-3 V3 profiles. These are slicing tests, not physical print certifications. Bambu LAN, PrusaLink, Duet and modern Flashforge HTTP adapters now join OctoPrint and Moonraker. Network adapters have protocol simulation tests; those tests do not certify particular hardware or firmware. See [validation](docs/VALIDATION.md).
 
 ## What works
 
@@ -44,6 +44,8 @@ No mouse automation, modified slicer build, bundled firmware or model service is
 
 An Orca printer preset is not a network API. File handoff is intentionally reported as `manual_handoff`, never “printing.” Do not route a proprietary printer through an unrelated adapter. See [connection setup and protocol limits](docs/CONNECTIONS.md). Use the [hardware acceptance checklist](docs/HARDWARE_VALIDATION.md) to validate your model and firmware.
 
+Credential variables must use the `ORCA_` or `HERMES_ORCA_` namespace. Credential-bearing HTTP requires an explicit plaintext opt-in; see [setup and migration](docs/CONNECTIONS.md#credentials-and-migration).
+
 ## Install in Hermes
 
 Install [OrcaSlicer](https://github.com/OrcaSlicer/OrcaSlicer/releases) and select your real printer/nozzle and filament in it. Save a small project to verify your settings first.
@@ -69,7 +71,7 @@ For a raw model:
 
 For a network printer:
 
-> Configure my Moonraker printer at http://printer.local:7125 using my exact Orca printer preset. Its API key is already in the MOONRAKER_API_KEY environment variable. Check its status.
+> Configure my Moonraker printer at https://printer.local using my exact Orca printer preset. Its API key is already in the ORCA_MOONRAKER_API_KEY environment variable. Check its status.
 
 Then ask to upload a reviewed job and start it when the bed and material are ready. Upload and start are separate actions. Existing explicit authorization can be reused; the agent should not ask for redundant confirmation.
 

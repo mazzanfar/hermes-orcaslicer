@@ -3,12 +3,13 @@ import os
 import re
 import urllib.parse
 from .common import OrcaError
+from .connections import credential_name
 from .monitoring import number
 
 
 def secret(options, name, default=None):
     variable = options.get(name)
-    value = os.environ.get(variable) if variable else default
+    value = os.environ.get(credential_name(variable)) if variable else default
     if value is None:
         raise OrcaError("Set the configured printer credential environment variable.")
     return value

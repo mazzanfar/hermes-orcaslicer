@@ -1,6 +1,6 @@
 # Validation record
 
-Updated: 2026-09-27. Release 0.4.0. This record focuses on reproducible offline and simulated-protocol checks; it is not hardware certification.
+Updated: 2026-09-27. Release 0.5.0. This record focuses on reproducible offline and simulated-protocol checks; it is not hardware certification.
 
 The current acceptance suite has 14 tests and uses registered plugin handlers. It passes locally and all six Linux/macOS/Windows × Python 3.11/3.13 CI combinations passed for the 0.2.0 candidate ([run 36279726356](https://github.com/mazzanfar/hermes-orcaslicer/actions/runs/36279726356)). Those historical jobs ran Python and simulated printer protocols; current CI also runs the actual Orca application. Release checks additionally use actual Hermes and stock OrcaSlicer as described below.
 
@@ -69,3 +69,7 @@ Each real-slicer job downloads an official OS-specific Orca 2.4.2 asset, verifie
 - An actually malformed STL passed to Orca, followed by failed-job export rejection.
 
 The protocol suite remains 14 substantive tests, extended rather than duplicated. Physical printing is never invoked by CI. Real-slicer results do not certify mechanical strength, fit, camera cleanliness assessment or every printer's firmware protocol. CodeQL runs separately on Python code and the release requires its check as well.
+
+## 0.5.0 credential regression coverage
+
+The existing registered-tool connection workflow now rejects unrelated credential names for API keys, passwords, access codes and cameras, both at configuration and when loading legacy records. A loopback listener observes zero requests for rejected configurations. It also rejects implicit credential-bearing plaintext (including Duet's default password and a separate camera), accepts HTTPS configuration and exercises explicit plaintext opt-in through the existing authenticated HTTP workflows. The Bambu TLS workflow uses a dedicated credential name. The suite remains 14 tests; these are simulations, not additional hardware tests.

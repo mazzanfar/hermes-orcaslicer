@@ -1,6 +1,6 @@
 name: orcaslicer
-version: "0.4.0"
-description: "Prepare, slice, preflight and export with OrcaSlicer profiles; upload and control printers through supported network protocols."
+version: "0.5.0"
+description: "Prepare, slice, preflight and export with OrcaSlicer profiles; upload and control printers through supported network protocols. Independent of OrcaSlicer and Nous Research."
 manifest_version: 2
 api_version: 1
 license: MIT
