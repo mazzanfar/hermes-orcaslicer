@@ -12,7 +12,7 @@ from .profiles import BED_TYPES, Catalog, inspect_project, roots
 from .preview import layer_svg
 from .slicer import Slicer, diagnose, discover
 
-__version__ = "0.4.0"
+__version__ = "0.5.0"
 
 
 def prop(description, type="string", **kwargs):
@@ -48,8 +48,8 @@ TOOLS = {
     "orca_printer_configure": ("Add a named printer connection, bound to its exact Orca machine/nozzle preset. File handoff works for any printer; network capabilities depend on protocol. Ask user for endpoint and secret environment variable name; never put keys into tool arguments.",
                                {"name": prop("Unique printer name"), "kind": prop("Connection type", enum=["file", "moonraker", "octoprint", "prusalink", "duet", "bambu_lan", "flashforge_http"]),
                                 "printer_profile": prop("Exact Orca machine preset name, including nozzle"), "url": prop("HTTP(S) printer base URL for network connections"),
-                                "api_key_env": prop("Environment variable NAME containing API key; not the key"),
-                                "options": prop("Protocol options: Prusa storage/username/password_env; Duet password_env; Flashforge serial/access_code_env/bed_levelling; Bambu serial/access_code_env/ca_file/use_ams/ams_mapping/calibration booleans. Optional camera_url and separate camera_api_key_env for HTTP snapshots; Bambu P1/A1 alternatively camera_protocol=bambu_jpeg and optional camera_port. No secret values.", "object")}),
+                                "api_key_env": prop("ORCA_ or HERMES_ORCA_ environment variable NAME containing API key; not the key"),
+                                "options": prop("Protocol options: Prusa storage/username/password_env; Duet password_env; Flashforge serial/access_code_env/bed_levelling; Bambu serial/access_code_env/ca_file/use_ams/ams_mapping/calibration booleans. Optional camera_url and separate camera_api_key_env for HTTP snapshots; Bambu P1/A1 alternatively camera_protocol=bambu_jpeg and optional camera_port. All credential names must start with ORCA_ or HERMES_ORCA_. Credentials require HTTPS; allow_plaintext_credentials=true explicitly permits plaintext for printer and camera on a user-approved trusted network. No secret values.", "object")}),
     "orca_printers": ("List configured printer connections and exact profile bindings. Does not discover or scan the network.", {}),
     "orca_printer_status": ("Read printer readiness/progress without changing hardware state. Use after start/control to verify the actual outcome.", {"name": prop("Configured printer name")}),
     "orca_camera_snapshot": ("Capture one private local JPEG/PNG from the explicitly configured camera. Returns an image path for visual inspection, not a claim that the plate is empty or clean. No streaming or automatic printing.", {"name": prop("Configured printer name")}),

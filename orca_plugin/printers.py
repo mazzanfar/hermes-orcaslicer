@@ -8,7 +8,6 @@ from __future__ import annotations
 import json
 import http.client
 import os
-import re
 import ssl
 import time
 import urllib.error
@@ -19,6 +18,8 @@ from pathlib import Path
 
 from .common import OrcaError, identifier, read_json, sha256, write_json
 from .monitoring import number, percent, phase
+from .connections import validate_credentials
+from .common import credential_env_name
 
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -28,6 +29,7 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
 
 class HTTP:
     def __init__(self, config):
+        validate_credentials(config)
         self.config = config
         parsed = urllib.parse.urlsplit(config["url"])
         if parsed.scheme not in {"http", "https"} or not parsed.hostname or parsed.username or parsed.password or parsed.query or parsed.fragment:
@@ -36,10 +38,11 @@ class HTTP:
         self.opener = urllib.request.build_opener(NoRedirect(), urllib.request.HTTPSHandler(context=ssl.create_default_context()))
 
     def request(self, method, path, data=None, content_type=None, headers=None):
+        validate_credentials(self.config)
         headers = {"Accept": "application/json", **(headers or {})}
         env = self.config.get("api_key_env")
         if env:
-            secret = os.environ.get(env)
+            secret = os.environ.get(credential_env_name(env))
             if not secret:
                 raise OrcaError(f"Set the API key in environment variable {env}.")
             headers["X-Api-Key"] = secret
@@ -48,7 +51,7 @@ class HTTP:
             content_type = "application/json"
         options = self.config.get("options", {})
         if options.get("username") and options.get("password_env"):
-            password = os.environ.get(options["password_env"])
+            password = os.environ.get(credential_env_name(options["password_env"]))
             if not password:
                 raise OrcaError("Set the configured password environment variable.")
             manager = urllib.request.HTTPPasswordMgrWithDefaultRealm()
@@ -170,13 +173,14 @@ class Printers:
             if not url:
                 raise OrcaError("A printer URL is required.")
             config["url"] = url
-            HTTP(config)  # Validation only; no network I/O.
             if api_key_env:
-                if not re.fullmatch(r"[A-Z_][A-Z0-9_]*", api_key_env):
-                    raise OrcaError("Supply the environment variable NAME, not an API key.")
+                credential_env_name(api_key_env)
                 config["api_key_env"] = api_key_env
         from .connections import validate_options
         config["options"] = validate_options(kind, options or {})
+        validate_credentials(config)
+        if kind != "file":
+            HTTP(config)  # Validation only; no network I/O.
         if kind == "bambu_lan":
             endpoint = urllib.parse.urlsplit(url)
             if endpoint.scheme != "https" or endpoint.path not in ("", "/") or endpoint.port:
@@ -193,6 +197,7 @@ class Printers:
     def config(self, name):
         path = self.base / "printers" / f"{identifier(name)}.json"
         config = read_json(path)
+        validate_credentials(config)
         return config
 
     def adapter(self, config):

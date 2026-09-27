@@ -4,6 +4,16 @@ User-facing changes, newest first. Dates use UTC; historical previews remain lab
 
 ## [Unreleased]
 
+## [0.5.0] — 2026-09-27
+
+### Fixed
+- Incorporated @teknium1’s credential-scope contribution ([#12](https://github.com/mazzanfar/hermes-orcaslicer/pull/12)), with additional checks for saved connections.
+- Block model-steered forwarding of unrelated environment secrets by enforcing dedicated credential namespaces at configuration and use, including saved connections.
+- Require HTTPS for credential-bearing printer/camera requests unless plaintext is explicitly enabled for that connection; includes Duet's default password.
+
+### Changed
+- Document migration for legacy connections and independent project status. Existing protocol workflows cover rejected names and blocked plaintext without adding test cases.
+
 ## [0.4.0] — 2026-09-27
 
 ### Added
@@ -41,7 +51,8 @@ User-facing changes, newest first. Dates use UTC; historical previews remain lab
 - OctoPrint and Moonraker upload, explicit start, status and requested pause/resume/cancel.
 - Hermes installation checks, cross-platform protocol tests and real macOS slicing.
 
-[Unreleased]: https://github.com/mazzanfar/hermes-orcaslicer/compare/v0.4.0...main
+[Unreleased]: https://github.com/mazzanfar/hermes-orcaslicer/compare/v0.5.0...main
+[0.5.0]: https://github.com/mazzanfar/hermes-orcaslicer/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/mazzanfar/hermes-orcaslicer/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/mazzanfar/hermes-orcaslicer/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/mazzanfar/hermes-orcaslicer/compare/v0.1.0...v0.2.0
