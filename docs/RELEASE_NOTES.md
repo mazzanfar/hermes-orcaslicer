@@ -1,3 +1,15 @@
+# 0.3.0
+
+Stable release of the documented OrcaSlicer/Hermes workflows, with expanded repeatable validation and public contribution controls.
+
+- Actual stock OrcaSlicer 2.4.2 runs on Windows, macOS and Linux in CI, using hash-verified official binaries.
+- Installed-package acceptance across Python 3.11, 3.13 and 3.14, separate from the repository import path.
+- Extended end-to-end slicing coverage: first/last previews, both export formats, completed-job recovery in a fresh service, overwrite rejection, object editing/reslicing and real invalid-mesh failure.
+- Protected main, owner-controlled merges, contribution guide, issue/PR templates and CODEOWNERS.
+- Weekly Dependabot Python/Actions updates, security-update PRs, CodeQL, private reporting and secret push protection.
+
+The 20-tool behavior and protocol coverage from 0.2.0 remain. Real physical compatibility depends on printer model and firmware; protocol simulation is explicitly labeled. Unsupported cloud connections, RTSPS, continuous video and autonomous printing remain outside the release scope. Full toolpath review uses native Orca.
+
 # 0.2.0 preview
 
 Adds 20-tool workflows for object editing, reusable native review copies, explicit build-plate selection and offline preflight. Direct protocols now include Bambu LAN MQTT/FTPS, PrusaLink v1, Duet RepRapFirmware HTTP and modern single-tool Flashforge HTTP alongside OctoPrint and Moonraker.

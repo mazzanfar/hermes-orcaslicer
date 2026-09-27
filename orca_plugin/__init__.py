@@ -12,7 +12,7 @@ from .profiles import BED_TYPES, Catalog, inspect_project, roots
 from .preview import layer_svg
 from .slicer import Slicer, diagnose, discover
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 
 def prop(description, type="string", **kwargs):
