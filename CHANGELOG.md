@@ -4,6 +4,11 @@ User-facing changes, newest first. Dates use UTC; historical previews remain lab
 
 ## [Unreleased]
 
+## [0.4.0] — 2026-09-27
+
+### Added
+- Verified wheel and source archive with SHA-256 checksums attached to the GitHub release.
+
 ### Changed
 - Updated build tooling and SHA-pinned GitHub Actions through Dependabot.
 - Clarified contribution workflow, duplicate-work searches, branch/PR naming and validation expectations; added README badges and this changelog.
@@ -36,7 +41,8 @@ User-facing changes, newest first. Dates use UTC; historical previews remain lab
 - OctoPrint and Moonraker upload, explicit start, status and requested pause/resume/cancel.
 - Hermes installation checks, cross-platform protocol tests and real macOS slicing.
 
-[Unreleased]: https://github.com/mazzanfar/hermes-orcaslicer/compare/v0.3.0...main
+[Unreleased]: https://github.com/mazzanfar/hermes-orcaslicer/compare/v0.4.0...main
+[0.4.0]: https://github.com/mazzanfar/hermes-orcaslicer/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/mazzanfar/hermes-orcaslicer/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/mazzanfar/hermes-orcaslicer/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/mazzanfar/hermes-orcaslicer/releases/tag/v0.1.0
