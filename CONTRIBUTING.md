@@ -72,8 +72,8 @@ Extend existing end-to-end workflows before adding tests; avoid redundant per-me
 - Separate upload from start. Unknown readiness is not ready; uncertain start outcomes must not be retried. Preserve artifact hashes and durable receipt protections.
 - Distinguish command acceptance from physical outcome. Missing telemetry stays unknown; camera images cannot certify bed readiness.
 - Use generated fixtures, licensed code and bounded dependencies. Keep private models, credentials, printer records and images out of commits and reports.
-- Update relevant documentation and tool descriptions when behavior changes.
+- Update relevant documentation, tool descriptions and the [Unreleased changelog](CHANGELOG.md#unreleased) when behavior changes.
 
 ## Review and maintenance
 
-Protected `main` requires a PR, passing checks and resolved conversations, including for the owner. Force pushes, branch deletion and automatic merging are disabled. External PRs may need owner approval before CI runs. Dependabot updates receive the same review; releases and Hermes catalog submissions are separate maintainer actions.
+Protected `main` requires a PR, passing checks and resolved conversations, including for the owner. Force pushes and deletion of `main` are blocked; automatic merging is disabled. External PRs may need owner approval before CI runs. Dependabot updates receive the same review; releases and Hermes catalog submissions are separate maintainer actions.

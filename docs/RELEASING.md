@@ -8,6 +8,7 @@
 - Exercise export and preview; ensure failed/unknown jobs cannot be sent.
 - Update `docs/VALIDATION.md` with measured results and known limitations.
 - Review `git diff --cached` for user models, profiles, credentials, addresses and private logs.
+- Move `CHANGELOG.md` Unreleased entries into the new version with its UTC release date and comparison link; retain an empty Unreleased section.
 - Keep versions synchronized in `plugin.yaml`, `pyproject.toml` and `orca_plugin.__version__`.
 - Publish a normal release after the documented acceptance gates pass. Scope hardware/firmware claims to actual evidence; a stable version is not universal printer certification. Use prereleases only for intentionally experimental release candidates.
 - Only submit to the Hermes catalog after the public repository and pinned release commit exist. Catalog admission requires a maintainer-reviewed PR; publishing this repository does not imply admission.
