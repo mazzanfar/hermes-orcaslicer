@@ -18,7 +18,8 @@ from pathlib import Path
 
 from .common import OrcaError, identifier, read_json, sha256, write_json
 from .monitoring import number, percent, phase
-from .connections import credential_name, validate_credentials
+from .connections import validate_credentials
+from .common import credential_env_name
 
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -41,7 +42,7 @@ class HTTP:
         headers = {"Accept": "application/json", **(headers or {})}
         env = self.config.get("api_key_env")
         if env:
-            secret = os.environ.get(credential_name(env))
+            secret = os.environ.get(credential_env_name(env))
             if not secret:
                 raise OrcaError(f"Set the API key in environment variable {env}.")
             headers["X-Api-Key"] = secret
@@ -50,7 +51,7 @@ class HTTP:
             content_type = "application/json"
         options = self.config.get("options", {})
         if options.get("username") and options.get("password_env"):
-            password = os.environ.get(credential_name(options["password_env"]))
+            password = os.environ.get(credential_env_name(options["password_env"]))
             if not password:
                 raise OrcaError("Set the configured password environment variable.")
             manager = urllib.request.HTTPPasswordMgrWithDefaultRealm()
@@ -173,7 +174,7 @@ class Printers:
                 raise OrcaError("A printer URL is required.")
             config["url"] = url
             if api_key_env:
-                credential_name(api_key_env)
+                credential_env_name(api_key_env)
                 config["api_key_env"] = api_key_env
         from .connections import validate_options
         config["options"] = validate_options(kind, options or {})

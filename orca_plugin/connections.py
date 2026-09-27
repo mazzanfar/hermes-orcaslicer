@@ -2,30 +2,24 @@
 import re
 import urllib.parse
 from pathlib import Path
-from .common import OrcaError
-
-
-def credential_name(value):
-    if not isinstance(value, str) or not re.fullmatch(r"(?:ORCA|HERMES_ORCA)_[A-Z0-9_]+", value):
-        raise OrcaError("Credential names must use the ORCA_ or HERMES_ORCA_ namespace. Reconfigure legacy credentials under a plugin-owned name.")
-    return value
+from .common import OrcaError, credential_env_name
 
 
 def credential_transport(url, has_credentials, options):
-    opt_in = options.get("allow_insecure_http", False)
+    opt_in = options.get("allow_plaintext_credentials", False)
     if type(opt_in) is not bool:
-        raise OrcaError("allow_insecure_http must be a boolean.")
+        raise OrcaError("allow_plaintext_credentials must be a boolean.")
     if has_credentials and urllib.parse.urlsplit(url).scheme != "https" and not opt_in:
-        raise OrcaError("Credentials require HTTPS; allow_insecure_http=true explicitly opts into plaintext on a trusted network.")
+        raise OrcaError("Credentials require HTTPS; allow_plaintext_credentials=true explicitly opts into plaintext on a trusted network.")
 
 
 def validate_credentials(config):
     options = config.get("options", {})
     for key, value in options.items():
         if key.endswith("_env"):
-            credential_name(value)
+            credential_env_name(value)
     if config.get("api_key_env") is not None:
-        credential_name(config["api_key_env"])
+        credential_env_name(config["api_key_env"])
     credential_transport(config.get("url", ""),
                          bool(config.get("api_key_env") or options.get("password_env") or options.get("access_code_env") or config.get("kind") == "duet"), options)
     if options.get("camera_api_key_env"):
@@ -40,7 +34,7 @@ def validate_options(kind, options):
         "flashforge_http": {"serial", "access_code_env", "bed_levelling"},
         "bambu_lan": {"serial", "access_code_env", "ca_file", "mqtt_port", "ftps_port", "use_ams", "ams_mapping", "bed_levelling", "flow_cali", "vibration_cali", "timelapse"},
     }
-    camera_options = {"camera_url", "camera_api_key_env", "allow_insecure_http"}
+    camera_options = {"camera_url", "camera_api_key_env", "allow_plaintext_credentials"}
     if kind == "bambu_lan":
         camera_options |= {"camera_protocol", "camera_port"}
     if not isinstance(options, dict) or set(options) - (allowed[kind] | camera_options):
@@ -57,7 +51,7 @@ def validate_options(kind, options):
         raise OrcaError("camera_api_key_env requires camera_url.")
     for key, value in options.items():
         if key.endswith("_env"):
-            credential_name(value)
+            credential_env_name(value)
         if key.endswith("_port") and (type(value) is not int or not 1 <= value <= 65535):
             raise OrcaError("Port must be an integer from 1 to 65535.")
         if key in {"use_ams", "bed_levelling", "flow_cali", "vibration_cali", "timelapse"} and type(value) is not bool:

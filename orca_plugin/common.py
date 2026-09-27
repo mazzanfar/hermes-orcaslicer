@@ -44,6 +44,21 @@ def identifier(value: str) -> str:
     return value
 
 
+CREDENTIAL_ENV_PATTERN = re.compile(r"(ORCA|HERMES_ORCA)_[A-Z0-9_]+")
+
+
+def credential_env_name(value, option: str = "api_key_env") -> str:
+    """Accept only plugin-scoped secret variable NAMES (ORCA_* / HERMES_ORCA_*).
+
+    The plugin later sends os.environ[name] to a model-supplied URL, so an
+    unscoped name could forward an unrelated provider secret to that host.
+    """
+    if not isinstance(value, str) or not CREDENTIAL_ENV_PATTERN.fullmatch(value):
+        raise OrcaError(f"{option} must be the NAME of an environment variable starting with ORCA_ (for example ORCA_OCTOPRINT_KEY), "
+                        "never a secret value or an unrelated provider variable.")
+    return value
+
+
 def existing_file(value: str, suffixes=None) -> Path:
     p = Path(value).expanduser().resolve()
     if not p.is_file():

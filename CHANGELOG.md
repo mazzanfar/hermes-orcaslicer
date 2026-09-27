@@ -7,6 +7,7 @@ User-facing changes, newest first. Dates use UTC; historical previews remain lab
 ## [0.5.0] — 2026-09-27
 
 ### Fixed
+- Incorporated @teknium1’s credential-scope contribution ([#12](https://github.com/mazzanfar/hermes-orcaslicer/pull/12)), with additional checks for saved connections.
 - Block model-steered forwarding of unrelated environment secrets by enforcing dedicated credential namespaces at configuration and use, including saved connections.
 - Require HTTPS for credential-bearing printer/camera requests unless plaintext is explicitly enabled for that connection; includes Duet's default password.
 

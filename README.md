@@ -84,7 +84,7 @@ The plugin discovers normal macOS/Windows/Linux installations. Override paths wh
 | `ORCA_SLICER_PATH` | Full executable path; on macOS use `.../OrcaSlicer.app/Contents/MacOS/OrcaSlicer` |
 | `ORCA_PROFILES_DIR` | Extra preset roots separated by the OS path separator (`:` on macOS/Linux, `;` on Windows) |
 | `HERMES_ORCA_HOME` | Plugin state directory; defaults to `~/.hermes-orca` |
-| Your chosen API-key variable | Secret used by a configured printer; its value is never an agent tool argument |
+| `ORCA_<PRINTER>_KEY` (your chosen name) | Secret used by a configured printer; its value is never an agent tool argument |
 
 Set these in the environment inherited by Hermes. Desktop applications may not inherit terminal environment settings. Linux AppImages or custom launcher scripts may need an explicit `ORCA_PROFILES_DIR` pointing to their resource profiles; a minimal Linux host also needs Orca’s system libraries. `orca_diagnose` reports whether the executable can run and which profile roots were found.
 

@@ -152,7 +152,7 @@ class ConnectionWorkflows(Base):
         self.server.kind = kind
         self.tools.call("orca_printer_configure", name=kind, kind=kind, printer_profile="Example 0.4 nozzle",
                         url=self.server.url, api_key_env="ORCA_TEST_KEY",
-                        options={"allow_insecure_http": True, **({"serial": "TESTSERIAL", "access_code_env": "ORCA_TEST_KEY"} if kind == "flashforge_http" else
+                        options={"allow_plaintext_credentials": True, **({"serial": "TESTSERIAL", "access_code_env": "ORCA_TEST_KEY"} if kind == "flashforge_http" else
                         {"camera_url": self.server.url + "/snapshot", "camera_api_key_env": "ORCA_CAMERA_TEST_KEY"} if kind == "moonraker" else {})})
 
     def upload(self, kind):
@@ -218,9 +218,9 @@ class ConnectionWorkflows(Base):
         from orca_plugin.common import write_json
         before = len(self.server.calls)
         for field in ("api_key_env", "password_env", "access_code_env", "camera_api_key_env"):
-            for forbidden in ("OPENROUTER_API_KEY", "ANTHROPIC_API_KEY", "ORCA_", "HERMES_ORCA_", "ORCA_KEY\n"):
+            for forbidden in ("OPENROUTER_API_KEY", "ANTHROPIC_API_KEY", "ORCA_", "HERMES_ORCA_", "ORCA_KEY\n", "orca_key"):
                 with self.subTest(field=field, forbidden=forbidden), patch.dict(os.environ, {forbidden: "never-forward-this"}):
-                    options = {"allow_insecure_http": True}
+                    options = {"allow_plaintext_credentials": True}
                     kind = {"password_env": "duet", "access_code_env": "flashforge_http"}.get(field, "moonraker")
                     args = dict(name="blocked", kind=kind, printer_profile="Example 0.4 nozzle", url=self.server.url, options=options)
                     if field == "api_key_env":
@@ -229,13 +229,15 @@ class ConnectionWorkflows(Base):
                         options[field] = forbidden
                     if field == "camera_api_key_env": options["camera_url"] = self.server.url + "/snapshot"
                     if kind == "flashforge_http": options["serial"] = "TESTSERIAL"
-                    self.assertIn("namespace", self.tools.reject("orca_printer_configure", **args))
+                    self.assertIn("ORCA_", self.tools.reject("orca_printer_configure", **args))
                     self.assertFalse((self.base / "printers/blocked.json").exists())
                     write_json(self.base / "printers/legacy.json", {**args, "name": "legacy"})
                     for tool in ("orca_printer_status", "orca_camera_snapshot"):
-                        self.assertIn("namespace", self.tools.reject(tool, name="legacy"))
+                        self.assertIn("ORCA_", self.tools.reject(tool, name="legacy"))
+        self.assertIn("ORCA_", self.tools.reject("orca_printer_configure", name="wrong-type", kind="moonraker", printer_profile="Example 0.4 nozzle",
+                          url="https://printer.invalid", options={"camera_url": "https://camera.invalid", "camera_api_key_env": 1}))
         for opt_in in (None, False, "true", 1):
-            options = {} if opt_in is None else {"allow_insecure_http": opt_in}
+            options = {} if opt_in is None else {"allow_plaintext_credentials": opt_in}
             args = dict(name="plaintext", kind="moonraker", printer_profile="Example 0.4 nozzle", url=self.server.url, api_key_env="ORCA_TEST_KEY", options=options)
             self.tools.reject("orca_printer_configure", **args)
             write_json(self.base / "printers/legacy.json", {**args, "name": "legacy"})
