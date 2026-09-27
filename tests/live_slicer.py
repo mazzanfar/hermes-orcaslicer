@@ -24,11 +24,22 @@ def cube(path):
     path.write_text("\n".join(text + ["endsolid cube"]))
 
 
+def wait_for_job(tools, job_id):
+    deadline = time.monotonic() + 120
+    while time.monotonic() < deadline:
+        result = tools.call("orca_job", job_id=job_id)
+        if result["state"] != "slicing":
+            return result
+        time.sleep(0.2)
+    raise AssertionError("Tiny acceptance job exceeded two minutes")
+
+
 def run():
     base = Path("test-output/cross-brand").resolve()
     base.mkdir(parents=True, exist_ok=True)
     model = base / "cube.stl"
     cube(model)
+    source_bytes = model.read_bytes()
     tools = Tools(base)
     catalog = Catalog(roots(discover()))
     cases = [
@@ -43,11 +54,7 @@ def run():
         job = tools.call("orca_prepare", source=str(model), machine=preset("machine", machine),
                          process=preset("process", process), filaments=[preset("filament", filament)], arrange=True, orient=True, bed_type="Textured PEI Plate")
         tools.call("orca_slice", job_id=job["id"])
-        while True:
-            result = tools.call("orca_job", job_id=job["id"])
-            if result["state"] != "slicing":
-                break
-            time.sleep(0.2)
+        result = wait_for_job(tools, job["id"])
         if result["state"] == "sliced":
             assert result["printer_profile"] == machine
             for output in result["artifacts"]:
@@ -58,10 +65,18 @@ def run():
             artifact = next(a for a in result["artifacts"] if a["name"].endswith(".gcode"))
             preview = tools.call("orca_preview", job_id=job["id"], artifact=artifact["name"])
             assert preview["segments"] > 0, preview
-            destination = base / (job["id"] + ".gcode")
-            exported = tools.call("orca_export", job_id=job["id"], artifact=artifact["name"], destination=str(destination))
-            assert exported["print_started"] is False
-            assert destination.read_bytes() == Path(artifact["path"]).read_bytes()
+            last_layer = max(r["layer_markers"] for r in result["reports"])
+            assert tools.call("orca_preview", job_id=job["id"], artifact=artifact["name"], layer=last_layer)["segments"] > 0
+            # A fresh tool service must still read and export completed jobs.
+            restarted = Tools(base)
+            assert restarted.call("orca_job", job_id=job["id"])["state"] == "sliced"
+            for output in result["artifacts"]:
+                destination = base / (job["id"] + "-" + output["name"])
+                exported = restarted.call("orca_export", job_id=job["id"], artifact=output["name"], destination=str(destination))
+                assert exported["print_started"] is False
+                assert destination.read_bytes() == Path(output["path"]).read_bytes()
+                restarted.reject("orca_export", job_id=job["id"], artifact=output["name"], destination=str(destination))
+            assert model.read_bytes() == source_bytes
         print(json.dumps({"printer": machine, "job": job["id"], "state": result["state"],
                           "error": result.get("error"), "reports": result.get("reports")}), flush=True)
         results.append(result)
@@ -81,16 +96,23 @@ def run():
             assert inspected["objects"][0]["settings"]["wall_loops"] == "4"
             edited_job = tools.call("orca_prepare", source=edited["project"])
             tools.call("orca_slice", job_id=edited_job["id"])
-            while True:
-                edited_result = tools.call("orca_job", job_id=edited_job["id"])
-                if edited_result["state"] != "slicing":
-                    break
-                time.sleep(0.2)
+            edited_result = wait_for_job(tools, edited_job["id"])
             assert edited_result["state"] == "sliced", edited_result
             final_project = next(a["path"] for a in edited_result["artifacts"] if a["name"].endswith(".3mf"))
             assert tools.call("orca_inspect", source=final_project)["objects"][0]["settings"]["wall_loops"] == "4"
             results.append(edited_result)
             print(json.dumps({"editing_workflow": "passed", "job": edited_job["id"]}), flush=True)
+    # Real Orca failure, rather than a mocked subprocess return code.
+    broken = base / "invalid.stl"
+    broken.write_text("This is not a triangulated mesh.\n")
+    rejected = tools.call("orca_prepare", source=str(broken), machine=preset("machine", machine),
+                          process=preset("process", process), filaments=[preset("filament", filament)], bed_type="Textured PEI Plate")
+    tools.call("orca_slice", job_id=rejected["id"])
+    failed = wait_for_job(tools, rejected["id"])
+    assert failed["state"] == "failed", failed
+    tools.reject("orca_export", job_id=rejected["id"], artifact="sliced.3mf", destination=str(base / "must-not-export.3mf"))
+    assert not (base / "must-not-export.3mf").exists()
+    print(json.dumps({"invalid_mesh_rejected": True}), flush=True)
     (base / "results.json").write_text(json.dumps(results, indent=2))
     return 0 if all(r["state"] == "sliced" for r in results) else 1
 

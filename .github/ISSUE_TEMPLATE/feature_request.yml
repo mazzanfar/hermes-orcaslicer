@@ -1,0 +1,17 @@
+name: Feature request
+description: Propose a workflow improvement or protocol integration.
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: User workflow
+      description: What are you trying to accomplish, and what is missing?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior and validation
+      description: Include official API references and available hardware when relevant. Printer presets remain owned by OrcaSlicer.
+    validations:
+      required: true

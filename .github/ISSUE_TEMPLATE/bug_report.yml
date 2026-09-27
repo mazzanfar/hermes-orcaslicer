@@ -1,0 +1,25 @@
+name: Bug report
+description: Report a reproducible problem in a supported workflow.
+body:
+  - type: markdown
+    attributes:
+      value: "For vulnerabilities, use private reporting in SECURITY.md. Never include access codes, API keys, printer addresses/serials, private images or models."
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Plugin, Hermes, Orca, OS and Python versions; connection protocol and printer model/firmware if relevant.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Include expected and observed results. Prefer a small generated model over private geometry. Do not repeat a print with an unknown start outcome.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Redacted evidence
+      description: Tool errors or minimal logs; distinguish physical observations from simulated tests.
