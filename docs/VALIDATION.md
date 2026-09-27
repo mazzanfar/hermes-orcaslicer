@@ -1,6 +1,6 @@
 # Validation record
 
-Date: 2026-09-26. Preview release. This record focuses on reproducible offline and simulated-protocol checks; it is not hardware certification.
+Updated: 2026-09-27. Release 0.3.0. This record focuses on reproducible offline and simulated-protocol checks; it is not hardware certification.
 
 The current acceptance suite has 14 tests and uses registered plugin handlers. It passes locally and all six Linux/macOS/Windows × Python 3.11/3.13 CI combinations passed for the 0.2.0 candidate ([run 36279726356](https://github.com/mazzanfar/hermes-orcaslicer/actions/runs/36279726356)). CI runs Python and simulated printer protocols, not the Orca application. Release checks additionally use actual Hermes and stock OrcaSlicer as described below.
 
@@ -29,7 +29,7 @@ The Prusa profile reported a long first-layer/startup estimate for a tiny cube. 
 
 - Broad physical print quality, fit, strength or hardware/firmware compatibility. Private development sessions are not a public certification program.
 - Broad hardware/firmware validation of uploads, start and pause/resume/cancel. Protocol simulations alone do not establish this.
-- Real Orca CLI execution on Windows. Cross-platform Python CI does not establish this.
+- Hardware/firmware behavior beyond independently observed configurations. Real Orca CLI execution is now covered on all three desktop platforms.
 - General hardware compatibility across Bambu LAN, PrusaLink, Duet and Flashforge HTTP models and firmware versions. Bambu cloud and other unimplemented protocols remain unavailable.
 - All unusual Orca profiles, conditional compatibility expressions, toolchangers and multi-material layouts.
 - Automated understanding of complete geometry/support/arc visualization. Full interactive review is provided by native Orca; the plugin SVG remains a linear toolpath aid. Native launch is not proof of review.
@@ -51,3 +51,21 @@ Camera framing, bounded reads, separate HTTP credentials, TLS identity checks, m
 - A separate model conversation read a loopback Moonraker simulator twice, reported unchanged telemetry, fetched the generated 8×8 JPEG fixture and inspected it with Hermes vision. It described a solid-color image and did not infer bed readiness. The server recorded exactly two status GETs and one snapshot GET, with zero start commands. This is agent integration coverage, not hardware evidence.
 - Installing the 0.2.0 candidate through Hermes prepared `paho-mqtt` 2.1.0 automatically in its managed runtime. Validation remained green with a `safe` scan and no warnings. Job state outside the installed source survived replacement.
 - The 0.2.0 wheel contains the bundled skill and bounded base MQTT dependency and excludes tests, private session records and credentials.
+
+## 0.3.0 cross-platform release gates
+
+[The first expanded CI run](https://github.com/mazzanfar/hermes-orcaslicer/actions/runs/36281386035) passed actual OrcaSlicer 2.4.2 on Windows, macOS and Ubuntu 24.04, alongside the six existing installed-package/protocol jobs. The release workflow additionally includes Python 3.14 and runs on pushes, PRs, manual dispatch and a weekly schedule.
+
+The acceptance runner imports the installed package from `site-packages` outside the repository import path, validates the package entry point, bundled skill, base MQTT dependency and CLI, then runs the existing protocol workflows. This prevents an incomplete wheel from passing solely because source files are present in the checkout.
+
+Each real-slicer job downloads an official OS-specific Orca 2.4.2 asset, verifies its pinned SHA-256, and installs it only in the disposable runner directory. The same registered-tool workflow exercises:
+
+- Raw generated STL with Prusa MK4, Creality Ender-3 V3 and Bambu P1S profiles.
+- Explicit plate selection and preflight of both G-code and sliced 3MF.
+- First and last layer linear previews.
+- Fresh-service access to completed jobs and byte-identical export of both formats.
+- Rejection of an existing export destination and preservation of the input model.
+- Saved-project inspection, object process changes, move/rotate/scale and real reslicing.
+- An actually malformed STL passed to Orca, followed by failed-job export rejection.
+
+The protocol suite remains 14 substantive tests, extended rather than duplicated. Physical printing is never invoked by CI. Real-slicer results do not certify mechanical strength, fit, camera cleanliness assessment or every printer's firmware protocol. CodeQL runs separately on Python code and the release requires its check as well.

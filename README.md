@@ -2,7 +2,7 @@
 
 A native Hermes plugin for preparing, slicing, reviewing and exporting 3D prints with **stock OrcaSlicer**. It uses OrcaSlicer's own installed printer, process and filament profiles—including custom presets—instead of maintaining a separate list of printer models.
 
-**Status: 0.2.0 preview.** Real slicing has been exercised on macOS and Linux with OrcaSlicer 2.4.2 and Bambu P1S, Prusa MK4 and Creality Ender-3 V3 profiles. These are slicing tests, not physical print certifications. Bambu LAN, PrusaLink, Duet and modern Flashforge HTTP adapters now join OctoPrint and Moonraker. Network adapters have protocol simulation tests; those tests do not certify particular hardware or firmware. See [validation](docs/VALIDATION.md).
+**Release: 0.3.0.** Real slicing has been exercised on Windows, macOS and Linux with OrcaSlicer 2.4.2 and Bambu P1S, Prusa MK4 and Creality Ender-3 V3 profiles. These are slicing tests, not physical print certifications. Bambu LAN, PrusaLink, Duet and modern Flashforge HTTP adapters now join OctoPrint and Moonraker. Network adapters have protocol simulation tests; those tests do not certify particular hardware or firmware. See [validation](docs/VALIDATION.md).
 
 ## What works
 
@@ -132,13 +132,13 @@ The SVG is a lightweight linear-extrusion review aid. It omits arcs and does not
 
 ## Develop and test
 
-Python 3.11+; the base installation includes Bambu MQTT. TLS acceptance testing also uses the OpenSSL command-line utility.
+Python 3.11+; CI exercises 3.11, 3.13 and 3.14. The base installation includes Bambu MQTT. TLS acceptance testing also uses the OpenSSL command-line utility.
 
 ```sh
 git clone https://github.com/mazzanfar/hermes-orcaslicer.git
 cd hermes-orcaslicer
 python -m pip install .
-python -m unittest discover -s tests -v
+python tests/installed_package.py
 hermes plugins doctor . --ci
 python -m orca_plugin.cli orca_diagnose
 ```
@@ -156,3 +156,9 @@ Opt-in real CLI tests: `python -m tests.live_slicer`. They generate a 5 mm cube,
 See [architecture](docs/ARCHITECTURE.md), [security and job semantics](SECURITY.md), [contributing](CONTRIBUTING.md), and [release checklist](docs/RELEASING.md).
 
 For opt-in read-only hardware validation, configure the real connection and run `python -m tests.live_printer --name PRINTER --camera`. Omit `--camera` when unavailable; optionally pass `--receipt ID` to check job identity. `--state-dir` selects another plugin state directory. The runner sends no upload/start/control commands and writes a private local JSON report. Sharing reports or camera images is a separate user decision. See [hardware validation guide](docs/HARDWARE_TESTING.md).
+
+## Contributing and maintenance
+
+The repository is public and accepts issues and pull requests from forks. Only the repository owner has write/merge access. Protected `main` requires a PR and passing acceptance, real-slicer and security checks; automatic merging is disabled. See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, the test matrix and protocol contribution requirements.
+
+Dependabot checks Python dependencies and pinned GitHub Actions weekly, and security-update PRs are enabled. CodeQL, secret scanning and push protection are enabled. Use [private vulnerability reporting](https://github.com/mazzanfar/hermes-orcaslicer/security/advisories/new) for security issues.
