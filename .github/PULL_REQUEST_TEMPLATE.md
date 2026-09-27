@@ -1,17 +1,24 @@
-## Problem and resulting behavior
+## What
+<!-- Resulting behavior and scope; before/after example for a fix. -->
 
-Describe the user-visible problem and what this change makes possible. Link related issues.
+## Why
+<!-- User problem, reproducer or missing workflow. -->
+
+## Approach
+<!-- Important choices and tradeoffs; keep simple changes brief. -->
 
 ## Validation
-
-List the workflows exercised, commands/results, OS, Python and Orca versions. For protocol changes, identify which results are simulations and which used physical hardware. Redact credentials, addresses, serials and private models/images.
-
-- [ ] I read [CONTRIBUTING.md](../CONTRIBUTING.md).
-- [ ] I extended existing end-to-end coverage where practical and kept tests focused.
-- [ ] Sources remain unchanged, upload stays separate from start, and unknown outcomes are not retried.
-- [ ] Documentation and capability descriptions match the actual behavior.
-- [ ] No credentials, private printer records or copyrighted model/preset assets are included.
+<!-- Commands/steps, actual results and relevant versions/platforms. Separate simulation
+from hardware testing. State what was not run; documentation-only is a valid explanation. -->
 
 ## Limitations
+<!-- Untested cases, compatibility or migration effects; “None known” if appropriate. -->
 
-State anything untested and any compatibility or migration impact. Delete sections that do not apply.
+## Related work
+<!-- Link issues and overlapping/dependent PRs, or state none was found.
+Use Closes #123 only when the issue is fully resolved. -->
+
+- [ ] I read [CONTRIBUTING.md](https://github.com/mazzanfar/hermes-orcaslicer/blob/main/CONTRIBUTING.md) and followed its branch/PR naming conventions.
+- [ ] I searched open and closed/merged issues and PRs before implementation and again before opening this PR.
+- [ ] The change is focused, validation claims are accurate, and relevant documentation is updated.
+- [ ] No credentials, private printer data, generated builds or unlicensed assets are included.

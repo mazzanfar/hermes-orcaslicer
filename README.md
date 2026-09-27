@@ -1,5 +1,10 @@
 # OrcaSlicer for Hermes Agent
 
+[![Tests](https://github.com/mazzanfar/hermes-orcaslicer/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/mazzanfar/hermes-orcaslicer/actions/workflows/test.yml)
+[![Security](https://github.com/mazzanfar/hermes-orcaslicer/actions/workflows/security.yml/badge.svg?branch=main)](https://github.com/mazzanfar/hermes-orcaslicer/actions/workflows/security.yml)
+[![Release](https://img.shields.io/github/v/release/mazzanfar/hermes-orcaslicer)](https://github.com/mazzanfar/hermes-orcaslicer/releases/latest)
+[![License: MIT](https://img.shields.io/github/license/mazzanfar/hermes-orcaslicer)](LICENSE)
+
 A native Hermes plugin for preparing, slicing, reviewing and exporting 3D prints with **stock OrcaSlicer**. It uses OrcaSlicer's own installed printer, process and filament profiles—including custom presets—instead of maintaining a separate list of printer models.
 
 **Release: 0.3.0.** Real slicing has been exercised on Windows, macOS and Linux with OrcaSlicer 2.4.2 and Bambu P1S, Prusa MK4 and Creality Ender-3 V3 profiles. These are slicing tests, not physical print certifications. Bambu LAN, PrusaLink, Duet and modern Flashforge HTTP adapters now join OctoPrint and Moonraker. Network adapters have protocol simulation tests; those tests do not certify particular hardware or firmware. See [validation](docs/VALIDATION.md).
@@ -153,7 +158,7 @@ python -m orca_plugin.cli orca_slice '{"job_id":"ID_FROM_PREPARE"}' --wait
 
 Opt-in real CLI tests: `python -m tests.live_slicer`. They generate a 5 mm cube, arrange/orient and slice with installed Prusa and Creality profiles, edit/reslice object settings and geometry, preview/export, and verify reusable review copies. They never contact a printer or launch GUI windows. On Linux a display or `xvfb-run` may be needed, depending on the Orca build. macOS app execution under a restrictive sandbox may abort even when `--help` works; run the smoke test in a normal local terminal.
 
-See [architecture](docs/ARCHITECTURE.md), [security and job semantics](SECURITY.md), [contributing](CONTRIBUTING.md), and [release checklist](docs/RELEASING.md).
+See [changelog](CHANGELOG.md), [architecture](docs/ARCHITECTURE.md), [security and job semantics](SECURITY.md), [contributing](CONTRIBUTING.md), and [release checklist](docs/RELEASING.md).
 
 For opt-in read-only hardware validation, configure the real connection and run `python -m tests.live_printer --name PRINTER --camera`. Omit `--camera` when unavailable; optionally pass `--receipt ID` to check job identity. `--state-dir` selects another plugin state directory. The runner sends no upload/start/control commands and writes a private local JSON report. Sharing reports or camera images is a separate user decision. See [hardware validation guide](docs/HARDWARE_TESTING.md).
 
