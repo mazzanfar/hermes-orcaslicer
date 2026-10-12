@@ -4,8 +4,14 @@ User-facing changes, newest first. Dates use UTC; historical previews remain lab
 
 ## [Unreleased]
 
+## [0.5.1] — 2026-10-12
+
 ### Fixed
 - Make `orca_diagnose` report nonzero OrcaSlicer runtime failures with a control-character-safe, bounded error summary instead of misclassifying every required CLI flag as missing.
+
+### Changed
+- Update both CodeQL steps together to 4.38.3 and group future CodeQL updates, including major versions.
+- Refresh the README banner.
 
 ## [0.5.0] — 2026-09-27
 
@@ -54,7 +60,8 @@ User-facing changes, newest first. Dates use UTC; historical previews remain lab
 - OctoPrint and Moonraker upload, explicit start, status and requested pause/resume/cancel.
 - Hermes installation checks, cross-platform protocol tests and real macOS slicing.
 
-[Unreleased]: https://github.com/mazzanfar/hermes-orcaslicer/compare/v0.5.0...main
+[Unreleased]: https://github.com/mazzanfar/hermes-orcaslicer/compare/v0.5.1...main
+[0.5.1]: https://github.com/mazzanfar/hermes-orcaslicer/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/mazzanfar/hermes-orcaslicer/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/mazzanfar/hermes-orcaslicer/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/mazzanfar/hermes-orcaslicer/compare/v0.2.0...v0.3.0

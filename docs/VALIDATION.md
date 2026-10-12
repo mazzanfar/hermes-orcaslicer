@@ -73,3 +73,9 @@ The protocol suite remains 14 substantive tests, extended rather than duplicated
 ## 0.5.0 credential regression coverage
 
 The existing registered-tool connection workflow now rejects unrelated credential names for API keys, passwords, access codes and cameras, both at configuration and when loading legacy records. A loopback listener observes zero requests for rejected configurations. It also rejects implicit credential-bearing plaintext (including Duet's default password and a separate camera), accepts HTTPS configuration and exercises explicit plaintext opt-in through the existing authenticated HTTP workflows. The Bambu TLS workflow uses a dedicated credential name. The suite remains 14 tests; these are simulations, not additional hardware tests.
+
+## 0.5.1 runtime diagnostics
+
+The installed-package acceptance suite now contains 17 tests, including nonzero Orca process exits, successful help output and bounded printable error summaries. All 17 passed on macOS with Python 3.14.7. The installed wheel's entry point, bundled skill, MQTT dependency and CLI were verified outside the repository import path.
+
+Stock OrcaSlicer on macOS passed the existing generated-cube workflow for Prusa MK4, Creality Ender-3 V3 and Bambu P1S, including edited-project reslicing, first/last previews, plate preflight, both exports and malformed-mesh rejection. Protocol tests use local simulators; no physical printer was contacted. Cross-platform results and exact release-commit admission checks are recorded in the GitHub release.

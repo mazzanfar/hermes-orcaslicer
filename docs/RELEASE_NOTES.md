@@ -1,7 +1,7 @@
-# 0.5.0
+# 0.5.1
 
-Security fix for the Hermes catalog review: credential names must use the ORCA_ or HERMES_ORCA_ namespace, and credential-bearing printer/camera requests require HTTPS unless plaintext is explicitly enabled. Enforcement also applies to saved connections and credential reads.
+`orca_diagnose` now distinguishes a failed OrcaSlicer process from an incompatible CLI. It reports the exit code and a bounded, printable runtime-error summary; missing flags are checked only after successful help output.
 
-Upgrade from 0.4.0 or earlier. Legacy connections may fail closed; see [migration](CONNECTIONS.md#credentials-and-migration). Never repurpose provider secrets as printer credentials. The plaintext opt-in records configuration intent, not independent human authorization.
+Both CodeQL steps use 4.38.3. Dependabot groups all future CodeQL updates, including major versions, so init and analyze stay compatible. The README banner is refreshed.
 
-Wheel, source archive and SHA-256 checksums accompany the release. Slicing and protocol capabilities are unchanged; no new physical hardware certification is claimed. See [changelog](../CHANGELOG.md) and [validation](VALIDATION.md).
+Wheel, source archive and SHA-256 checksums accompany the release. The 20-tool capability set and credential protections are unchanged. No new physical printer validation is claimed. See [changelog](../CHANGELOG.md) and [validation](VALIDATION.md).
