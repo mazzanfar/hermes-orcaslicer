@@ -4,6 +4,9 @@ User-facing changes, newest first. Dates use UTC; historical previews remain lab
 
 ## [Unreleased]
 
+### Fixed
+- Make `orca_diagnose` report nonzero OrcaSlicer runtime failures with a control-character-safe, bounded error summary instead of misclassifying every required CLI flag as missing.
+
 ## [0.5.0] — 2026-09-27
 
 ### Fixed

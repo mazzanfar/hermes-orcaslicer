@@ -43,9 +43,19 @@ def diagnose():
     except (OSError, subprocess.TimeoutExpired) as exc:
         raise OrcaError("OrcaSlicer could not run. On Linux a display/Xvfb may be required; see troubleshooting.") from exc
     output = proc.stdout + proc.stderr
-    missing = [flag for flag in REQUIRED_FLAGS if flag not in output]
+    if proc.returncode == 0:
+        missing = [flag for flag in REQUIRED_FLAGS if flag not in output]
+        runtime_error = None
+    else:
+        missing = []
+        detail = " ".join("".join(char if char.isprintable() else " " for char in output).split())
+        runtime_error = f"OrcaSlicer exited with code {proc.returncode}"
+        if detail:
+            runtime_error += f": {detail}"
+        runtime_error = runtime_error[:500]
     return {"executable": str(exe), "version": next((line for line in output.splitlines() if "OrcaSlicer" in line), "unknown"),
-            "cli_ready": proc.returncode == 0 and not missing, "missing_flags": missing,
+            "cli_ready": proc.returncode == 0 and not missing, "return_code": proc.returncode,
+            "runtime_error": runtime_error, "missing_flags": missing,
             "profile_roots": [str(p) for p in roots(exe)], "platform": sys.platform}
 
 
