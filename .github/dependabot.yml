@@ -20,6 +20,8 @@ updates:
       day: monday
     open-pull-requests-limit: 5
     groups:
+      codeql:
+        patterns: ["github/codeql-action/*"]
       actions-minor-patch:
         update-types: [minor, patch]
     commit-message:
